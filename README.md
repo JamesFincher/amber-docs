@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Amber Protocol Docs
 
-## Getting Started
+Markdown-first documentation workspace for drafting, reviewing, versioning, and publishing public docs with AI-friendly workflows.
 
-First, run the development server:
+## What this repo provides
+
+- **Public-readable docs UX**: publish finalized docs so they can be crawled by AI tools and humans.
+- **Draft → Final → Official flow**: support iterative authoring and promotion to official versions.
+- **Versioned content model in Convex**: document records, versions, statuses, and notes.
+- **Simple copy/paste AI workflow**: markdown-first editing + prompt-ready content blocks.
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Convex backend
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This repo includes a Convex backend under `convex/`.
 
-## Learn More
+Run Convex locally in another terminal:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx convex dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy to Cloudflare + map `docs.amberprotocol.org`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1) Push this repo to GitHub
 
-## Deploy on Vercel
+If remote is not yet configured:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+git remote add origin <YOUR_GITHUB_REPO_URL>
+git push -u origin work
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 2) Create a Cloudflare Pages project
+
+1. In Cloudflare Dashboard, go to **Workers & Pages → Create → Pages → Connect to Git**.
+2. Select this GitHub repository.
+3. Framework preset: **Next.js**.
+4. Build command: `pnpm build`.
+5. Output directory: `.next` (or accept Cloudflare's Next.js default if auto-detected).
+6. Set environment variables as needed (for example Convex deployment URLs).
+7. Deploy.
+
+### 3) Add custom domain `docs.amberprotocol.org`
+
+1. Open the deployed Pages project.
+2. Go to **Custom domains → Set up a custom domain**.
+3. Enter `docs.amberprotocol.org`.
+4. Cloudflare will create/verify the required DNS record in the `amberprotocol.org` zone.
+
+### 4) Verify DNS and TLS
+
+- Wait for status to become **Active**.
+- Confirm HTTPS is issued and valid.
+- Verify the site resolves:
+
+```bash
+curl -I https://docs.amberprotocol.org
+```
+
+## Notes
+
+I cannot directly create Cloudflare DNS/project resources from this environment without Cloudflare account/API credentials, but the repo is now documented so you can execute setup in under 5 minutes in the dashboard.
