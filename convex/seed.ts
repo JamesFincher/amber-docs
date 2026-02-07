@@ -1,6 +1,6 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
-export const ensureSeedData = mutation({
+export const ensureSeedData = internalMutation({
   args: {},
   handler: async (ctx) => {
     const existing = await ctx.db.query("docs").collect();
@@ -49,4 +49,3 @@ What needs approval, by when, and who owns it?
     return { created: 1 };
   },
 });
-

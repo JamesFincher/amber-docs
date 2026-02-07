@@ -1,12 +1,16 @@
 {
-  "name": "tmp-amber-docs-scaffold-1770490215",
+  "name": "amber-docs",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently -n web,convex -c cyan,magenta \"next dev\" \"convex dev\"",
+    "dev:web": "next dev",
+    "dev:convex": "convex dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "seed": "convex run seed:ensureSeedData --push"
   },
   "dependencies": {
     "convex": "^1.31.7",

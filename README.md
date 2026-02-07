@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Amber Docs
 
-## Getting Started
+Markdown-first company documentation with:
+- draft → final → official publishing
+- immutable revisions
+- per-doc notes
+- AI prompt packs (copy/paste into Claude, OpenAI, Kimi, etc.)
+- public rendered docs + public raw Markdown endpoints
 
-First, run the development server:
+## Stack
+
+- Next.js (App Router) for UI + public site
+- Convex for storage + versioning/workflows
+- Markdown rendering via `react-markdown` (GFM) + sanitization
+
+## Routes
+
+- Public docs:
+  - `/docs` (list official)
+  - `/docs/[slug]` (render official)
+  - `/raw/[slug]` (official Markdown, best for AI + copy/paste)
+- Admin/editor:
+  - `/admin`
+  - `/admin/[slug]`
+
+## Local Dev
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm convex dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This configures Convex and writes `.env.local` (ignored by git) with:
+- `CONVEX_DEPLOYMENT`
+- `NEXT_PUBLIC_CONVEX_URL`
+- `NEXT_PUBLIC_CONVEX_SITE_URL`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Configure Admin Writes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Writes go through a Convex HTTP action protected by a shared secret:
 
-## Learn More
+1. Pick a secret value (any random string).
+2. Set it in Convex:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm convex env set DOCS_WRITE_SECRET "your-secret"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. Set it for Next.js (in `.env.local`):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+DOCS_WRITE_SECRET=your-secret
+```
 
-## Deploy on Vercel
+### (Optional) Protect `/admin` With Basic Auth
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Set these in `.env.local`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me
+```
+
+### Run Everything
+
+```bash
+pnpm dev
+```
+
+Then open:
+- http://localhost:3000/admin
+
+Click **Seed Template** to create the starter “Executive Summary” doc.
+
+## Deploy
+
+Host the Next.js app on Vercel (or similar) and set env vars:
+- `NEXT_PUBLIC_CONVEX_URL`
+- `NEXT_PUBLIC_CONVEX_SITE_URL`
+- `DOCS_WRITE_SECRET`
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD` (recommended)
+
+Also set `DOCS_WRITE_SECRET` in your Convex deployment env for the same environment (dev/prod) via `pnpm convex env set ...` (use `--prod` for production).
+
+## Data Model (Convex)
+
+- `docs`: one row per doc (slug/title + pointers to draft/final/official revisions)
+- `revisions`: immutable markdown snapshots per doc
+- `notes`: lightweight annotations per doc (optionally tied to a revision/section)
+

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 
 function now() {
   return Date.now();
@@ -10,7 +10,7 @@ function required<T>(value: T | null | undefined, message: string): T {
   return value;
 }
 
-export const list = query({
+export const adminList = internalQuery({
   args: {},
   handler: async (ctx) => {
     const docs = await ctx.db.query("docs").collect();
@@ -35,14 +35,18 @@ export const listOfficial = query({
     const official = docs.filter((d) => !!d.officialRevisionId && !(d.archived ?? false));
     official.sort((a, b) => b.updatedAt - a.updatedAt);
 
-    const out = [];
+    const out: Array<{
+      slug: string;
+      title: string;
+      updatedAt: number;
+      revisionNumber: number | null;
+    }> = [];
     for (const d of official) {
       const officialRev = d.officialRevisionId ? await ctx.db.get(d.officialRevisionId) : null;
       out.push({
         slug: d.slug,
         title: d.title,
         updatedAt: d.updatedAt,
-        markdown: officialRev?.markdown ?? "",
         revisionNumber: officialRev?.number ?? null,
       });
     }
@@ -50,7 +54,7 @@ export const listOfficial = query({
   },
 });
 
-export const getBySlug = query({
+export const adminGetBySlug = internalQuery({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
     const doc = await ctx.db
@@ -108,7 +112,7 @@ export const getBySlug = query({
   },
 });
 
-export const getRevision = query({
+export const adminGetRevision = internalQuery({
   args: { revisionId: v.id("revisions") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.revisionId);
@@ -137,7 +141,7 @@ export const getOfficialBySlug = query({
   },
 });
 
-export const create = mutation({
+export const adminCreate = internalMutation({
   args: {
     slug: v.string(),
     title: v.string(),
@@ -172,7 +176,7 @@ export const create = mutation({
   },
 });
 
-export const saveDraft = mutation({
+export const adminSaveDraft = internalMutation({
   args: {
     docId: v.id("docs"),
     markdown: v.string(),
@@ -202,7 +206,7 @@ export const saveDraft = mutation({
   },
 });
 
-export const promoteToFinal = mutation({
+export const adminPromoteToFinal = internalMutation({
   args: { docId: v.id("docs"), revisionId: v.id("revisions") },
   handler: async (ctx, args) => {
     const doc = required(await ctx.db.get(args.docId), "Doc not found.");
@@ -215,7 +219,7 @@ export const promoteToFinal = mutation({
   },
 });
 
-export const promoteToOfficial = mutation({
+export const adminPromoteToOfficial = internalMutation({
   args: { docId: v.id("docs"), revisionId: v.id("revisions") },
   handler: async (ctx, args) => {
     const doc = required(await ctx.db.get(args.docId), "Doc not found.");
@@ -228,7 +232,7 @@ export const promoteToOfficial = mutation({
   },
 });
 
-export const archive = mutation({
+export const adminArchive = internalMutation({
   args: { docId: v.id("docs"), archived: v.boolean() },
   handler: async (ctx, args) => {
     const doc = required(await ctx.db.get(args.docId), "Doc not found.");
@@ -236,4 +240,3 @@ export const archive = mutation({
     return { ok: true };
   },
 });
-

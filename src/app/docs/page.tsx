@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listOfficialDocs } from "@/lib/convexPublic";
 
-export default async function Home() {
+export default async function DocsIndexPage() {
   const docs = await listOfficialDocs().catch(() => []);
 
   return (
@@ -9,17 +9,15 @@ export default async function Home() {
       <header className="mx-auto max-w-5xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Amber Docs</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-700">
-              Markdown-first company docs with draft→final→official workflows and AI prompt packs.
-            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">Docs</h1>
+            <p className="mt-2 text-sm text-zinc-700">Official, public documentation.</p>
           </div>
           <nav className="flex items-center gap-2 text-sm">
             <Link
-              href="/docs"
+              href="/"
               className="rounded-md border border-black/10 bg-white/60 px-3 py-1.5 font-medium text-zinc-900 shadow-sm backdrop-blur hover:bg-white"
             >
-              Browse
+              Home
             </Link>
             <Link
               href="/admin"
@@ -33,20 +31,9 @@ export default async function Home() {
 
       <main className="mx-auto mt-8 max-w-5xl">
         <section className="rounded-2xl border border-black/10 bg-white/60 p-5 shadow-sm backdrop-blur">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="text-sm font-semibold tracking-wide text-zinc-900">Official Docs</h2>
-            <Link
-              href="/docs"
-              className="text-xs font-medium text-zinc-700 underline decoration-black/20 underline-offset-4 hover:text-zinc-900 hover:decoration-black/40"
-            >
-              See all
-            </Link>
-          </div>
-          <ul className="mt-4 divide-y divide-black/5">
+          <ul className="divide-y divide-black/5">
             {docs.length === 0 ? (
-              <li className="py-4 text-sm text-zinc-700">
-                No official docs yet. Create a draft in the admin editor and promote it to official.
-              </li>
+              <li className="py-4 text-sm text-zinc-700">No official docs published yet.</li>
             ) : (
               docs.map((d) => (
                 <li key={d.slug} className="flex flex-wrap items-center justify-between gap-4 py-4">
@@ -69,3 +56,4 @@ export default async function Home() {
     </div>
   );
 }
+
