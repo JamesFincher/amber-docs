@@ -1,4 +1,5 @@
 import { loadDisclaimers, loadGlossary } from "@/lib/content/blocks.server";
+import { loadTemplates } from "@/lib/content/templates.server";
 import { AiAssistantClient } from "@/components/AiAssistantClient";
 
 export const metadata = {
@@ -9,6 +10,6 @@ export const metadata = {
 export default function AssistantPage() {
   const disclaimers = loadDisclaimers();
   const glossary = loadGlossary();
-  return <AiAssistantClient disclaimers={disclaimers} glossary={glossary} />;
+  const templates = loadTemplates();
+  return <AiAssistantClient disclaimers={disclaimers} glossary={glossary} templates={templates} />;
 }
-

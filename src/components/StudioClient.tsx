@@ -786,6 +786,9 @@ export function StudioClient() {
             <Link href="/templates" className="btn btn-secondary">
               Templates
             </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask AI
+            </Link>
             <Link href="/blocks" className="btn btn-secondary">
               Reusable text
             </Link>

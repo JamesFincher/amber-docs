@@ -327,6 +327,14 @@ export function DocsLibraryClient({
     setBookmarkedOnly(false);
   }
 
+  const aiHref = useMemo(() => {
+    const q = query.trim();
+    const task = q
+      ? `Help me find the best doc(s) for: "${q}". Use search_docs. Then answer it step-by-step.`
+      : "Help me find the right document. Ask me 1-3 clarifying questions, then point me to the best doc(s).";
+    return `/assistant?task=${encodeURIComponent(task)}`;
+  }, [query]);
+
   return (
     <div className="space-y-6">
       <section className="card p-6">
@@ -338,6 +346,9 @@ export function DocsLibraryClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Link href={aiHref} className="btn btn-primary">
+              Ask Amber AI
+            </Link>
             <button className="btn btn-secondary" type="button" onClick={reset}>
               Reset
             </button>
@@ -518,6 +529,9 @@ export function DocsLibraryClient({
                   >
                     {isBookmarked ? "Bookmarked" : "Save bookmark"}
                   </button>
+                  <Link href={`/assistant?doc=${encodeURIComponent(doc.slug)}`} className="btn btn-secondary">
+                    Ask AI about this
+                  </Link>
                   <Link href={`/docs/${encodeURIComponent(doc.slug)}/diff`} className="btn btn-secondary">
                     Compare versions
                   </Link>

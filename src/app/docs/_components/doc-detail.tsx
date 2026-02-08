@@ -61,6 +61,12 @@ export function DocDetail(props: {
         <div className="flex flex-wrap items-center gap-2">
           <VersionSelector slug={doc.slug} version={doc.version} versions={props.versions} isLatest={props.isLatest} />
           <Link
+            href={`/assistant?doc=${encodeURIComponent(doc.slug)}&version=${encodeURIComponent(doc.version)}`}
+            className="btn btn-primary"
+          >
+            Ask Amber AI
+          </Link>
+          <Link
             href={`/raw/v/${encodeURIComponent(doc.slug)}/${encodeURIComponent(doc.version)}`}
             className="btn btn-secondary"
           >
@@ -180,6 +186,12 @@ export function DocDetail(props: {
             <div className="card p-5">
               <h2 className="font-display text-xl font-semibold">What can I do here?</h2>
               <div className="mt-3 grid gap-2">
+                <Link
+                  href={`/assistant?doc=${encodeURIComponent(doc.slug)}&version=${encodeURIComponent(doc.version)}`}
+                  className="btn btn-primary"
+                >
+                  Ask Amber AI
+                </Link>
                 <BookmarkButton slug={doc.slug} />
                 <Link href={`/docs/${encodeURIComponent(doc.slug)}/diff`} className="btn btn-secondary">
                   Compare versions

@@ -189,6 +189,9 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
             <Link href="/templates" className="btn btn-secondary">
               Templates
             </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask AI
+            </Link>
             <Link href="/" className="btn btn-secondary">
               Home
             </Link>
@@ -234,6 +237,14 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
             <details>
               <summary className="cursor-pointer text-base font-semibold text-zinc-900">Advanced options</summary>
               <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href={`/assistant?task=${encodeURIComponent(
+                    "Help me create reusable text.\n\n1) Ask what I want to create (a disclaimer or a glossary entry).\n2) Draft it.\n3) Save it as a custom item using save_custom_disclaimer or save_custom_glossary_entry.",
+                  )}`}
+                  className="btn btn-primary"
+                >
+                  Ask Amber AI to draft one
+                </Link>
                 <button
                   className="btn btn-secondary"
                   onClick={() =>

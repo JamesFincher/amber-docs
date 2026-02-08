@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import type { DocRecord } from "@/lib/docs";
 import { extractH2Sections } from "@/lib/markdown";
@@ -83,7 +84,15 @@ export function AiPromptPack({ doc, relatedDocs }: { doc: DocRecord; relatedDocs
     <section className="card p-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-2xl font-semibold">AI helper prompts (optional)</h2>
-        <CopyButton text={docPrompt} label="Copy full-doc prompt" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/assistant?doc=${encodeURIComponent(doc.slug)}&version=${encodeURIComponent(doc.version)}`}
+            className="btn btn-primary"
+          >
+            Open in Ask AI
+          </Link>
+          <CopyButton text={docPrompt} label="Copy full-doc prompt" />
+        </div>
       </div>
       <p className="mb-4 text-zinc-700">
         If you use an AI tool, these prompts help with rewrites, claim extraction, and contradiction checks. You can ignore this section if you do not use AI.
