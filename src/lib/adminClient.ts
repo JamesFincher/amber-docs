@@ -6,6 +6,10 @@ type RpcRequest = {
 };
 
 export async function adminRpc<T = unknown>(method: string, args?: RpcRequest["args"]) {
+  throw new Error(
+    "adminRpc is not available in static export builds. Remove this call or switch off `output: export`.",
+  );
+
   const res = await fetch("/api/admin/rpc", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -26,4 +30,3 @@ export async function adminRpc<T = unknown>(method: string, args?: RpcRequest["a
 
   return payload as T;
 }
-
