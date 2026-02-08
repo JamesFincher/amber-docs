@@ -113,9 +113,8 @@ This document captures user stories that were *breaking in real use*, two soluti
 
 ## TODO (Remaining Gaps)
 
-- [ ] Undo/rollback for AI file edits (backup file or automatic "clone new version before editing").
-- [ ] Optional "dry run" mode for AI edits (preview diff before writing).
-- [ ] Add a safer default agent policy: never publish/unpublish unless user explicitly says "publish/unpublish".
-- [ ] Add onboarding flow for first-time users (what to click, where the folder is, what publish vs stage means).
-- [ ] Persist custom Templates/Blocks beyond one browser (export/import or workspace file-based storage).
-
+- [x] Undo/rollback for AI file edits (automatic backups + restore in Ask AI).
+- [x] Optional "dry run" mode for AI edits (preview diff + apply step).
+- [x] Safer default agent policy: never publish/unpublish unless user explicitly says "publish/unpublish".
+- [x] Onboarding flow for first-time users (simple 3-step modal).
+- [x] Persist custom Templates/Blocks beyond one browser (export/import JSON).

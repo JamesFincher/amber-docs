@@ -5,6 +5,7 @@ import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Telemetry } from "@/components/Telemetry";
+import { OnboardingGate } from "@/components/OnboardingGate";
 
 export const metadata: Metadata = {
   title: "Amber Docs",
@@ -43,6 +44,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <SiteHeader />
+        <OnboardingGate />
         <main id="main" tabIndex={-1} className="min-h-[calc(100vh-4rem)] focus:outline-none">
           {children}
         </main>

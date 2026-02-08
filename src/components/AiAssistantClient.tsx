@@ -11,6 +11,8 @@ import type { Approval, Citation, DocStage, DocVisibility } from "@/lib/docs";
 import { isoDate, resolveVersionAndUpdatedAt, safeFilePart, suggestedDocFileName } from "@/lib/content/docsWorkflow.shared";
 import { geminiGenerateText } from "@/lib/ai/gemini";
 import { computeWriteReady, deletePolicy, officialPatch, stagePatch } from "@/lib/ai/workspacePolicy";
+import { diffTextPreview } from "@/lib/ai/textDiff";
+import { createWorkspaceBackup, listWorkspaceBackups, restoreWorkspaceBackup } from "@/lib/ai/workspaceBackups";
 import type { AgentTranscriptItem, ToolDescriptor } from "@/lib/ai/castleAgent";
 import { runAgentLoop } from "@/lib/ai/castleAgent";
 import { saveStudioImport } from "@/lib/studioImport";
@@ -72,6 +74,7 @@ type FsDirectoryHandle = {
   name: string;
   entries(): AsyncIterableIterator<[string, FsFileHandle | FsDirectoryHandle]>;
   getFileHandle(name: string, opts?: { create?: boolean }): Promise<FsFileHandle>;
+  getDirectoryHandle(name: string, opts?: { create?: boolean }): Promise<FsDirectoryHandle>;
   removeEntry(name: string, opts?: { recursive?: boolean }): Promise<void>;
 };
 
@@ -94,6 +97,19 @@ type LocalDoc = {
   approvals: Approval[];
   markdown: string;
   frontmatter: Record<string, unknown>;
+};
+
+type PlannedEdit = {
+  planId: string;
+  slug: string;
+  version: string;
+  fileName: string;
+  createdAt: string;
+  summary: string;
+  diff: string;
+  truncated: boolean;
+  beforeText: string;
+  afterText: string;
 };
 
 function downloadText(filename: string, text: string, mime = "text/plain") {
@@ -400,6 +416,7 @@ export function AiAssistantClient({
   const [includeTemplates, setIncludeTemplates] = useState(true);
   const [allowFileWrites, setAllowFileWrites] = useState(false);
   const [allowDeletes, setAllowDeletes] = useState(false);
+  const [previewBeforeWrite, setPreviewBeforeWrite] = useState(true);
 
   const [dirHandle, setDirHandle] = useState<FsDirectoryHandle | null>(null);
   const [workspaceMode, setWorkspaceMode] = useState<"read" | "readwrite">("read");
@@ -408,6 +425,13 @@ export function AiAssistantClient({
   const workspaceDocsRef = useRef<LocalDoc[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const [presetDoc, setPresetDoc] = useState<{ slug: string; version: string | null } | null>(null);
+  const plannedEditsRef = useRef<Map<string, PlannedEdit>>(new Map());
+  const [plannedEdit, setPlannedEdit] = useState<PlannedEdit | null>(null);
+  const [backups, setBackups] = useState<
+    Array<{ backupFileName: string; createdAt: string; slug: string; version: string; title: string }>
+  >([]);
+  const [backupsBusy, setBackupsBusy] = useState(false);
+  const [backupsError, setBackupsError] = useState<string | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -580,7 +604,8 @@ export function AiAssistantClient({
         name: "workspace_status",
         description: "Return whether a local docs folder is connected and what permissions are available.",
         args: "{}",
-        returns: '{ connected: boolean, mode: "read"|"readwrite", allowFileWrites: boolean, allowDeletes: boolean, writeReady: boolean, docsCount: number }',
+        returns:
+          '{ connected: boolean, mode: "read"|"readwrite", allowFileWrites: boolean, allowDeletes: boolean, previewBeforeWrite: boolean, writeReady: boolean, docsCount: number, plannedEditsCount: number }',
       },
       {
         name: "workspace_list_docs",
@@ -605,39 +630,41 @@ export function AiAssistantClient({
       },
       {
         name: "workspace_update_doc",
-        description: "Update an existing doc file in the connected folder.",
-        args: "{ slug: string, version: string, patchFrontmatter?: object, markdown?: string, auditAction?: string, auditNote?: string }",
-        returns: "{ ok: boolean, fileName: string }",
+        description:
+          "Update an existing doc file in the connected folder. If Preview changes first is enabled, this may return a planned change instead of writing the file.",
+        args: "{ slug: string, version: string, patchFrontmatter?: object, markdown?: string, auditAction?: string, auditNote?: string, apply?: boolean }",
+        returns:
+          "{ ok: boolean, fileName: string, planned?: boolean, planId?: string, summary?: string, diff?: string, truncated?: boolean }",
       },
       {
         name: "workspace_publish",
         description: "Publish a doc in the connected folder (sets archived=false).",
-        args: "{ slug: string, version: string }",
-        returns: "{ ok: boolean }",
+        args: "{ slug: string, version: string, confirm: boolean }",
+        returns: "{ ok: boolean, planned?: boolean, planId?: string, summary?: string, diff?: string, truncated?: boolean }",
       },
       {
         name: "workspace_unpublish",
         description: "Unpublish a doc in the connected folder (sets archived=true).",
-        args: "{ slug: string, version: string }",
-        returns: "{ ok: boolean }",
+        args: "{ slug: string, version: string, confirm: boolean }",
+        returns: "{ ok: boolean, planned?: boolean, planId?: string, summary?: string, diff?: string, truncated?: boolean }",
       },
       {
         name: "workspace_set_stage",
         description: "Set a doc stage in the connected folder (draft/final/official).",
         args: '{ slug: string, version: string, stage: "draft"|"final"|"official" }',
-        returns: "{ ok: boolean }",
+        returns: "{ ok: boolean, planned?: boolean, planId?: string, summary?: string, diff?: string, truncated?: boolean }",
       },
       {
         name: "workspace_finalize",
         description: "Mark a doc as Final (stage=final). Does not publish/unpublish.",
         args: "{ slug: string, version: string }",
-        returns: "{ ok: boolean }",
+        returns: "{ ok: boolean, planned?: boolean, planId?: string, summary?: string, diff?: string, truncated?: boolean }",
       },
       {
         name: "workspace_official",
         description: "Mark a doc as Official (stage=official). Optionally set lastReviewedAt and approvals.",
         args: "{ slug: string, version: string, reviewedAt?: string, approvals?: Array<{ name: string, date: string }> }",
-        returns: "{ ok: boolean }",
+        returns: "{ ok: boolean, planned?: boolean, planId?: string, summary?: string, diff?: string, truncated?: boolean }",
       },
       {
         name: "workspace_clone_version",
@@ -649,7 +676,37 @@ export function AiAssistantClient({
         name: "workspace_delete_doc",
         description: "Delete a doc version file from the connected folder.",
         args: "{ slug: string, version: string, confirm: boolean }",
+        returns: "{ ok: boolean, backupFileName?: string }",
+      },
+      {
+        name: "workspace_apply_plan",
+        description: "Apply a previously planned workspace change (writes the file).",
+        args: "{ planId: string, confirm: boolean }",
+        returns: "{ ok: boolean, fileName: string }",
+      },
+      {
+        name: "workspace_discard_plan",
+        description: "Discard a planned workspace change.",
+        args: "{ planId: string }",
         returns: "{ ok: boolean }",
+      },
+      {
+        name: "workspace_list_backups",
+        description: "List backup files created by Amber AI (for undo/restore).",
+        args: "{ slug?: string, version?: string, limit?: number }",
+        returns: "{ backups: Array<{ backupFileName: string, createdAt: string, slug: string, version: string, title: string }> }",
+      },
+      {
+        name: "workspace_restore_backup",
+        description: "Restore a backup file (overwrites/recreates the doc version).",
+        args: "{ backupFileName: string, confirm: boolean }",
+        returns: "{ ok: boolean, fileName: string }",
+      },
+      {
+        name: "workspace_undo_last_change",
+        description: "Undo the most recent Amber AI change for a given doc version by restoring the latest backup.",
+        args: "{ slug: string, version: string, confirm: boolean }",
+        returns: "{ ok: boolean, backupFileName: string, fileName: string }",
       },
       {
         name: "send_to_studio",
@@ -681,7 +738,11 @@ Guidelines:
   - publish/unpublish is separate from stage (archived=false/true)
   - Final means stage=final
   - Official means stage=official and should include lastReviewedAt (and approvals if provided)
-- Do NOT delete files unless the user explicitly asked and workspace_status says allowDeletes=true. The delete tool requires confirm=true.
+- Safety:
+  - Do NOT publish/unpublish unless the user explicitly said "publish" or "unpublish" (those tools require confirm=true).
+  - Do NOT delete files unless the user explicitly asked and workspace_status says allowDeletes=true (delete requires confirm=true).
+  - If "Preview changes first" is enabled, workspace_update_doc may return a planned change. In that case, ask the user to confirm before applying it with workspace_apply_plan.
+  - Before writing a file, the app will create a backup automatically (you can list/restore backups).
 - Blocks are ${blocksAvailable}. Templates are ${templatesAvailable}.
 - If a request requires editing files but workspace is not connected or writes are disabled, explain what to click next.
 
@@ -739,6 +800,11 @@ Output JSON only.`;
         if (workspaceMode !== "readwrite") {
           throw new Error('Folder is connected in read-only mode. Turn on "Allow file edits", then click "Reconnect folder".');
         }
+        return dirHandle;
+      };
+
+      const ensureWorkspaceConnected = (): FsDirectoryHandle => {
+        if (!dirHandle) throw new Error('No workspace folder connected. Click "Choose docs folder" first.');
         return dirHandle;
       };
 
@@ -916,8 +982,10 @@ Output JSON only.`;
             mode,
             allowFileWrites,
             allowDeletes,
+            previewBeforeWrite,
             writeReady,
             docsCount: workspaceDocsRef.current.length,
+            plannedEditsCount: plannedEditsRef.current.size,
           };
         },
 
@@ -1032,6 +1100,7 @@ Output JSON only.`;
           const doc = workspaceDocsRef.current.find((d) => d.slug === slug && d.version === version);
           if (!doc) throw new Error(`Doc not found in workspace: ${slug}@${version}`);
 
+          const apply = a.apply === true;
           const patchFrontmatter =
             a.patchFrontmatter && typeof a.patchFrontmatter === "object" && !Array.isArray(a.patchFrontmatter)
               ? (a.patchFrontmatter as Record<string, unknown>)
@@ -1076,6 +1145,41 @@ Output JSON only.`;
 
           const md = patchMarkdown ?? doc.markdown;
           const body = matter.stringify(md, stripUndefined(nextFm) as Record<string, unknown>);
+          const beforeText = await readHandleText(doc.handle);
+
+          if (previewBeforeWrite && !apply) {
+            const preview = diffTextPreview({ from: beforeText, to: body, maxLines: 240, maxChars: 12_000 });
+            const planId = (() => {
+              const cryptoObj = (globalThis as unknown as { crypto?: { randomUUID?: () => string } }).crypto;
+              if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
+              return `plan-${Math.random().toString(36).slice(2, 10)}`;
+            })();
+            const plan: PlannedEdit = {
+              planId,
+              slug,
+              version,
+              fileName: doc.fileName,
+              createdAt: new Date().toISOString(),
+              summary: preview.summary,
+              diff: preview.diff,
+              truncated: preview.truncated,
+              beforeText,
+              afterText: body,
+            };
+            plannedEditsRef.current.set(planId, plan);
+            setPlannedEdit(plan);
+            return {
+              ok: true,
+              fileName: doc.fileName,
+              planned: true,
+              planId,
+              summary: preview.summary,
+              diff: preview.diff,
+              truncated: preview.truncated,
+            };
+          }
+
+          await createWorkspaceBackup({ root, docFileName: doc.fileName, text: beforeText });
           await writeHandleText(doc.handle, body);
           await refreshWorkspace(root);
           return { ok: true, fileName: doc.fileName };
@@ -1085,16 +1189,38 @@ Output JSON only.`;
           const a = asRecord(args);
           const slug = typeof a.slug === "string" ? a.slug : "";
           const version = typeof a.version === "string" ? a.version : "";
-          await toolFns.workspace_update_doc({ slug, version, patchFrontmatter: { archived: false }, auditAction: "ai:publish" });
-          return { ok: true };
+          const confirm = a.confirm === true;
+          if (!confirm) throw new Error("workspace_publish requires confirm=true");
+          if (!slug || !version) throw new Error("workspace_publish requires slug and version");
+          // Safety: require an explicit publish intent in the user's message.
+          if (!/\bpublish\b/i.test(text) || /\bunpublish\b/i.test(text)) {
+            throw new Error('Refusing to publish unless you explicitly say "publish" in your message.');
+          }
+          return await toolFns.workspace_update_doc({
+            slug,
+            version,
+            patchFrontmatter: { archived: false },
+            auditAction: "ai:publish",
+          });
         },
 
         workspace_unpublish: async (args) => {
           const a = asRecord(args);
           const slug = typeof a.slug === "string" ? a.slug : "";
           const version = typeof a.version === "string" ? a.version : "";
-          await toolFns.workspace_update_doc({ slug, version, patchFrontmatter: { archived: true }, auditAction: "ai:unpublish" });
-          return { ok: true };
+          const confirm = a.confirm === true;
+          if (!confirm) throw new Error("workspace_unpublish requires confirm=true");
+          if (!slug || !version) throw new Error("workspace_unpublish requires slug and version");
+          // Safety: require an explicit unpublish intent in the user's message.
+          if (!/\bunpublish\b/i.test(text)) {
+            throw new Error('Refusing to unpublish unless you explicitly say "unpublish" in your message.');
+          }
+          return await toolFns.workspace_update_doc({
+            slug,
+            version,
+            patchFrontmatter: { archived: true },
+            auditAction: "ai:unpublish",
+          });
         },
 
         workspace_set_stage: async (args) => {
@@ -1103,14 +1229,13 @@ Output JSON only.`;
           const version = typeof a.version === "string" ? a.version : "";
           const stage: DocStage | null = isStage(a.stage) ? a.stage : null;
           if (!stage) throw new Error("workspace_set_stage requires stage draft|final|official");
-          await toolFns.workspace_update_doc({
+          return await toolFns.workspace_update_doc({
             slug,
             version,
             patchFrontmatter: stagePatch(stage, { now: new Date() }),
             auditAction: "ai:set_stage",
             auditNote: `to ${stage}`,
           });
-          return { ok: true };
         },
 
         workspace_finalize: async (args) => {
@@ -1118,13 +1243,12 @@ Output JSON only.`;
           const slug = typeof a.slug === "string" ? a.slug : "";
           const version = typeof a.version === "string" ? a.version : "";
           if (!slug || !version) throw new Error("workspace_finalize requires slug and version");
-          await toolFns.workspace_update_doc({
+          return await toolFns.workspace_update_doc({
             slug,
             version,
             patchFrontmatter: stagePatch("final", { now: new Date() }),
             auditAction: "ai:finalize",
           });
-          return { ok: true };
         },
 
         workspace_official: async (args) => {
@@ -1135,7 +1259,7 @@ Output JSON only.`;
           const approvals = safeApprovals(a.approvals);
           const includeApprovals = a.approvals !== undefined;
           if (!slug || !version) throw new Error("workspace_official requires slug and version");
-          await toolFns.workspace_update_doc({
+          return await toolFns.workspace_update_doc({
             slug,
             version,
             patchFrontmatter: officialPatch({
@@ -1147,7 +1271,6 @@ Output JSON only.`;
             auditAction: "ai:official",
             auditNote: reviewedAt ? `reviewedAt ${reviewedAt}` : undefined,
           });
-          return { ok: true };
         },
 
         workspace_clone_version: async (args) => {
@@ -1203,9 +1326,105 @@ Output JSON only.`;
           const doc = workspaceDocsRef.current.find((d) => d.slug === slug && d.version === version);
           if (!doc) throw new Error(`Doc not found in workspace: ${slug}@${version}`);
 
+          const beforeText = await readHandleText(doc.handle);
+          const backup = await createWorkspaceBackup({ root, docFileName: doc.fileName, text: beforeText });
           await root.removeEntry(doc.fileName);
           await refreshWorkspace(root);
+          return { ok: true, backupFileName: backup.backupFileName };
+        },
+
+        workspace_apply_plan: async (args) => {
+          const root = ensureWorkspaceWriteReady();
+          const a = asRecord(args);
+          const planId = typeof a.planId === "string" ? a.planId : "";
+          const confirm = a.confirm === true;
+          if (!planId.trim()) throw new Error("workspace_apply_plan requires planId");
+          if (!confirm) throw new Error("workspace_apply_plan requires confirm=true");
+
+          const plan = plannedEditsRef.current.get(planId) ?? null;
+          if (!plan) throw new Error(`No planned change found for planId: ${planId}`);
+
+          const fileHandle = await root.getFileHandle(plan.fileName, { create: true });
+          const current = await readHandleText(fileHandle);
+          if (current !== plan.beforeText) {
+            throw new Error("The file changed since the plan was created. Ask me to plan the update again.");
+          }
+
+          await createWorkspaceBackup({ root, docFileName: plan.fileName, text: current });
+          await writeHandleText(fileHandle, plan.afterText);
+          plannedEditsRef.current.delete(planId);
+          setPlannedEdit((prev) => (prev?.planId === planId ? null : prev));
+          await refreshWorkspace(root);
+          return { ok: true, fileName: plan.fileName };
+        },
+
+        workspace_discard_plan: async (args) => {
+          const a = asRecord(args);
+          const planId = typeof a.planId === "string" ? a.planId : "";
+          if (!planId.trim()) throw new Error("workspace_discard_plan requires planId");
+          plannedEditsRef.current.delete(planId);
+          setPlannedEdit((prev) => (prev?.planId === planId ? null : prev));
           return { ok: true };
+        },
+
+        workspace_list_backups: async (args) => {
+          const root = ensureWorkspaceConnected();
+          const a = asRecord(args);
+          const slug = typeof a.slug === "string" ? a.slug.trim() : "";
+          const version = typeof a.version === "string" ? a.version.trim() : "";
+          const limit =
+            typeof a.limit === "number" && Number.isFinite(a.limit) ? Math.max(1, Math.min(200, a.limit)) : 30;
+          return await listWorkspaceBackups({
+            root,
+            slug: slug || null,
+            version: version || null,
+            limit,
+          });
+        },
+
+        workspace_restore_backup: async (args) => {
+          const root = ensureWorkspaceWriteReady();
+          const a = asRecord(args);
+          const backupFileName = typeof a.backupFileName === "string" ? a.backupFileName.trim() : "";
+          const confirm = a.confirm === true;
+          if (!backupFileName) throw new Error("workspace_restore_backup requires backupFileName");
+          if (!confirm) throw new Error("workspace_restore_backup requires confirm=true");
+
+          // If we're overwriting an existing file, back it up first.
+          const metaList = await listWorkspaceBackups({ root, limit: 200 });
+          const meta = metaList.backups.find((b) => b.backupFileName === backupFileName) ?? null;
+          if (meta) {
+            const targetFileName = suggestedDocFileName(meta.slug, meta.version);
+            try {
+              const existing = await root.getFileHandle(targetFileName);
+              const current = await readHandleText(existing);
+              if (current.trim()) await createWorkspaceBackup({ root, docFileName: targetFileName, text: current });
+            } catch {
+              // If it doesn't exist, nothing to back up.
+            }
+          }
+
+          const restored = await restoreWorkspaceBackup({ root, backupFileName, confirm: true });
+          await refreshWorkspace(root);
+          return { ok: restored.ok, fileName: restored.fileName };
+        },
+
+        workspace_undo_last_change: async (args) => {
+          const root = ensureWorkspaceWriteReady();
+          const a = asRecord(args);
+          const slug = typeof a.slug === "string" ? a.slug.trim() : "";
+          const version = typeof a.version === "string" ? a.version.trim() : "";
+          const confirm = a.confirm === true;
+          if (!slug || !version) throw new Error("workspace_undo_last_change requires slug and version");
+          if (!confirm) throw new Error("workspace_undo_last_change requires confirm=true");
+
+          const listed = await listWorkspaceBackups({ root, slug, version, limit: 5 });
+          const latest = listed.backups[0] ?? null;
+          if (!latest) throw new Error(`No backups found for ${slug}@${version}`);
+
+          const restored = await restoreWorkspaceBackup({ root, backupFileName: latest.backupFileName, confirm: true });
+          await refreshWorkspace(root);
+          return { ok: true, backupFileName: latest.backupFileName, fileName: restored.fileName };
         },
 
         send_to_studio: async (args) => {
@@ -1299,6 +1518,91 @@ Output JSON only.`;
     }
   }
 
+  function ensureWorkspaceWriteReadyUi(): FsDirectoryHandle {
+    if (!dirHandle) throw new Error('No workspace folder connected. Click "Choose docs folder" first.');
+    if (!allowFileWrites) throw new Error('File edits are disabled. Turn on "Allow file edits" first.');
+    if (workspaceMode !== "readwrite") {
+      throw new Error('Folder is connected in read-only mode. Turn on "Allow file edits", then click "Reconnect folder".');
+    }
+    return dirHandle;
+  }
+
+  async function onApplyPlannedEdit() {
+    const plan = plannedEdit;
+    if (!plan) return;
+    try {
+      const ok = window.confirm(
+        `Apply these changes to ${plan.slug} v${plan.version}?\n\nThis will edit your file. A backup will be saved automatically.`,
+      );
+      if (!ok) return;
+      const root = ensureWorkspaceWriteReadyUi();
+      const handle = await root.getFileHandle(plan.fileName, { create: true });
+      const current = await readHandleText(handle);
+      if (current !== plan.beforeText) {
+        alert("This file changed since the preview was created. Ask the AI to plan the update again.");
+        return;
+      }
+      await createWorkspaceBackup({ root, docFileName: plan.fileName, text: current });
+      await writeHandleText(handle, plan.afterText);
+      plannedEditsRef.current.delete(plan.planId);
+      setPlannedEdit(null);
+      await refreshWorkspace(root);
+      setMessages((prev) => [...prev, { role: "assistant", content: `Applied changes to ${plan.slug} v${plan.version}.` }]);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    }
+  }
+
+  function onDiscardPlannedEdit() {
+    const plan = plannedEdit;
+    if (!plan) return;
+    plannedEditsRef.current.delete(plan.planId);
+    setPlannedEdit(null);
+  }
+
+  async function onLoadBackups() {
+    if (!dirHandle) return alert("Connect your docs folder first.");
+    setBackupsBusy(true);
+    setBackupsError(null);
+    try {
+      const out = await listWorkspaceBackups({ root: dirHandle, limit: 30 });
+      setBackups(out.backups);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setBackupsError(msg);
+      setBackups([]);
+    } finally {
+      setBackupsBusy(false);
+    }
+  }
+
+  async function onRestoreBackupFromUi(backupFileName: string, meta: { slug: string; version: string }) {
+    try {
+      const ok = window.confirm(
+        `Restore this backup?\n\nThis will overwrite/recreate: ${meta.slug} v${meta.version}\n\nA backup of the current file (if it exists) will be saved first.`,
+      );
+      if (!ok) return;
+      const root = ensureWorkspaceWriteReadyUi();
+
+      const targetFileName = suggestedDocFileName(meta.slug, meta.version);
+      try {
+        const existing = await root.getFileHandle(targetFileName);
+        const current = await readHandleText(existing);
+        if (current.trim()) await createWorkspaceBackup({ root, docFileName: targetFileName, text: current });
+      } catch {
+        // nothing to back up
+      }
+
+      await restoreWorkspaceBackup({ root, backupFileName, confirm: true });
+      await refreshWorkspace(root);
+      alert("Restored.");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert(msg);
+    }
+  }
+
   return (
     <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
@@ -1377,7 +1681,7 @@ Output JSON only.`;
           </label>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <div className="mt-4 grid gap-3 md:grid-cols-5">
           <label className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3">
             <span className="font-semibold text-zinc-900">Use docs context</span>
             <input
@@ -1403,6 +1707,16 @@ Output JSON only.`;
               className="h-5 w-5"
               checked={includeTemplates}
               onChange={(e) => setIncludeTemplates(e.target.checked)}
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3">
+            <span className="font-semibold text-zinc-900">Preview changes first</span>
+            <input
+              type="checkbox"
+              className="h-5 w-5"
+              checked={previewBeforeWrite}
+              onChange={(e) => setPreviewBeforeWrite(e.target.checked)}
+              disabled={!allowFileWrites}
             />
           </label>
           <label className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
@@ -1475,6 +1789,46 @@ Output JSON only.`;
           </div>
         </details>
 
+        {dirHandle ? (
+          <details className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Backups (undo)</summary>
+            <div className="mt-2 text-sm text-zinc-700">
+              Amber AI saves a backup before it edits or deletes a file. You can restore a backup here.
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button className="btn btn-secondary" type="button" onClick={onLoadBackups} disabled={busy || backupsBusy}>
+                {backupsBusy ? "Loading..." : "Load backups"}
+              </button>
+            </div>
+            {backupsError ? <div className="mt-2 text-sm text-red-800">{backupsError}</div> : null}
+            {backups.length ? (
+              <div className="mt-3 grid gap-2">
+                {backups.slice(0, 10).map((b) => (
+                  <div key={b.backupFileName} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                    <div className="text-sm text-zinc-800">
+                      <span className="font-semibold">{b.slug}</span> v<span className="font-semibold">{b.version}</span>
+                      {b.createdAt ? <span className="text-zinc-500"> · {b.createdAt}</span> : null}
+                    </div>
+                    <button
+                      className="btn btn-secondary"
+                      type="button"
+                      disabled={busy || !allowFileWrites || workspaceMode !== "readwrite"}
+                      onClick={() => onRestoreBackupFromUi(b.backupFileName, { slug: b.slug, version: b.version })}
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-zinc-600">No backups loaded yet.</div>
+            )}
+            {!allowFileWrites ? (
+              <div className="mt-2 text-sm text-zinc-600">Turn on “Allow file edits” to restore backups.</div>
+            ) : null}
+          </details>
+        ) : null}
+
         {workspaceErrors.length ? (
           <details className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
             <summary className="cursor-pointer text-sm font-semibold text-zinc-900">
@@ -1510,6 +1864,40 @@ Output JSON only.`;
             </button>
           </div>
         </div>
+
+        {plannedEdit ? (
+          <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-amber-950">Preview before saving</div>
+                <div className="mt-1 text-sm text-amber-950">
+                  Planned change for <span className="font-semibold">{plannedEdit.slug}</span> v
+                  <span className="font-semibold">{plannedEdit.version}</span>
+                </div>
+                <div className="mt-1 text-sm text-amber-950">
+                  {plannedEdit.summary}
+                  {plannedEdit.truncated ? " (preview truncated)" : ""}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className="btn btn-primary" type="button" disabled={busy} onClick={onApplyPlannedEdit}>
+                  Apply changes
+                </button>
+                <button className="btn btn-secondary" type="button" disabled={busy} onClick={onDiscardPlannedEdit}>
+                  Discard
+                </button>
+              </div>
+            </div>
+            <details className="mt-3 rounded-xl border border-amber-200 bg-white p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Show preview (diff)</summary>
+              <pre className="mt-2 overflow-auto rounded-xl border border-zinc-200 bg-white p-3 font-mono text-xs text-zinc-900">{plannedEdit.diff}</pre>
+            </details>
+            <div className="mt-2 text-sm text-amber-950">
+              Tip: If you change your mind later, ask:{" "}
+              <span className="font-semibold">Undo last change</span> for this doc version (Amber AI keeps backups).
+            </div>
+          </section>
+        ) : null}
 
         <div className="mb-4 grid gap-2 md:grid-cols-4">
           <button
