@@ -1,0 +1,7 @@
+name = "amber-docs"
+compatibility_date = "2026-02-08"
+
+# Cloudflare CI is running `npx wrangler deploy` (Workers).
+# This project is a static Next.js export, so deploy the generated `out/` directory as assets.
+[assets]
+directory = "./out"
