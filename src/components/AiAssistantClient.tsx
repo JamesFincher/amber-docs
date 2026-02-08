@@ -10,6 +10,7 @@ import { buildMarkdownSkeleton, buildPrompt } from "@/lib/templates";
 import type { Approval, Citation, DocStage, DocVisibility } from "@/lib/docs";
 import { isoDate, resolveVersionAndUpdatedAt, safeFilePart, suggestedDocFileName } from "@/lib/content/docsWorkflow.shared";
 import { geminiGenerateText } from "@/lib/ai/gemini";
+import { formatAttachmentsForPrompt, type Attachment } from "@/lib/ai/attachments";
 import {
   defaultGeminiModel,
   DEFAULT_GEMINI_FLASH_MODEL,
@@ -63,12 +64,6 @@ type IndexDoc = {
 };
 
 type SynonymsMap = Record<string, string[]>;
-
-type Attachment = {
-  name: string;
-  text: string;
-  truncated: boolean;
-};
 
 type FsWritableStream = {
   write(data: string): Promise<void>;
@@ -133,15 +128,6 @@ function downloadText(filename: string, text: string, mime = "text/plain") {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function formatAttachmentsForPrompt(attachments: Attachment[]): string {
-  if (!attachments.length) return "";
-  const blocks = attachments.slice(0, 3).map((a, idx) => {
-    const head = `Attachment ${idx + 1}: ${a.name}${a.truncated ? " (truncated)" : ""}`;
-    return `${head}\n\`\`\`text\n${a.text}\n\`\`\``;
-  });
-  return `\n\nATTACHMENTS (user-provided files; treat as source material):\n${blocks.join("\n\n")}\n`;
 }
 
 function isStage(v: unknown): v is DocStage {
