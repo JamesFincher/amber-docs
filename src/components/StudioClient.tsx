@@ -7,7 +7,18 @@ import type { Approval, AuditEntry, Citation, DocStage, DocVisibility } from "@/
 import { stageBadgeClass } from "@/lib/docs";
 import { isoDate, resolveVersionAndUpdatedAt, safeFilePart, suggestedDocFileName } from "@/lib/content/docsWorkflow.shared";
 import { clearStudioImport, readStudioImport, type StudioImportDraft } from "@/lib/studioImport";
+import { slugFromFilename, summaryFromMarkdown, titleFromMarkdown } from "@/lib/studio/importFiles";
 import { CopyButton } from "@/components/CopyButton";
+import { Markdown } from "@/components/Markdown";
+
+type ImportResult = {
+  sourceName: string;
+  ok: boolean;
+  fileName?: string;
+  slug?: string;
+  version?: string;
+  error?: string;
+};
 
 type LocalDoc = {
   fileName: string;
@@ -284,6 +295,8 @@ const DOC_TYPES: DocTypeTemplate[] = [
 ];
 
 export function StudioClient() {
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+
   const [dirHandle, setDirHandle] = useState<FsDirectoryHandle | null>(null);
   const [docs, setDocs] = useState<LocalDoc[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -324,6 +337,15 @@ export function StudioClient() {
   const [newMarkdown, setNewMarkdown] = useState("");
   const [newCitations, setNewCitations] = useState<Array<{ label: string; url: string }>>([]);
   const [newApprovals, setNewApprovals] = useState<Array<{ name: string; date: string }>>([]);
+
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploadPreviewIndex, setUploadPreviewIndex] = useState<number>(0);
+  const [uploadPreviewName, setUploadPreviewName] = useState<string>("");
+  const [uploadPreviewText, setUploadPreviewText] = useState<string>("");
+  const [uploadPreviewMarkdown, setUploadPreviewMarkdown] = useState<string>("");
+  const [uploadPreviewRender, setUploadPreviewRender] = useState<boolean>(true);
+  const [uploadBusy, setUploadBusy] = useState<boolean>(false);
+  const [uploadResults, setUploadResults] = useState<ImportResult[]>([]);
 
   useEffect(() => {
     try {
@@ -372,6 +394,32 @@ export function StudioClient() {
     if (!newTitle.trim()) return;
     setNewSlug((prev) => (prev.trim() ? prev : slugifyTitle(newTitle)));
   }, [newTitle]);
+
+  useEffect(() => {
+    const f = uploadFiles[uploadPreviewIndex] ?? null;
+    if (!f) {
+      setUploadPreviewName("");
+      setUploadPreviewText("");
+      setUploadPreviewMarkdown("");
+      return;
+    }
+    setUploadPreviewName(f.name);
+    f.text()
+      .then((t) => {
+        const raw = String(t ?? "");
+        setUploadPreviewText(raw);
+        try {
+          const parsed = matter(raw);
+          setUploadPreviewMarkdown(String(parsed.content ?? ""));
+        } catch {
+          setUploadPreviewMarkdown(raw);
+        }
+      })
+      .catch(() => {
+        setUploadPreviewText("");
+        setUploadPreviewMarkdown("");
+      });
+  }, [uploadFiles, uploadPreviewIndex]);
 
   function applyImportDraft(draft: StudioImportDraft) {
     let fm: Record<string, unknown> = {};
@@ -453,6 +501,146 @@ export function StudioClient() {
 
     clearStudioImport();
     setImportDraft(null);
+  }
+
+  async function onImportFiles() {
+    const handle = dirHandle;
+    if (!handle) {
+      alert("Connect your docs folder first (Step 1), then import files.");
+      return;
+    }
+    if (!uploadFiles.length) return;
+
+    setUploadBusy(true);
+    setUploadResults([]);
+    const results: ImportResult[] = [];
+
+    async function fileExists(dir: FsDirectoryHandle, name: string): Promise<boolean> {
+      try {
+        await dir.getFileHandle(name);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    try {
+      for (const file of uploadFiles) {
+        const sourceName = file.name;
+        try {
+          const raw = await file.text();
+          let fm: Record<string, unknown> = {};
+          let md = "";
+
+          try {
+            const parsed = matter(raw);
+            fm = (parsed.data ?? {}) as Record<string, unknown>;
+            md = (parsed.content ?? "").trimEnd() + "\n";
+          } catch {
+            // If frontmatter parsing fails, treat the entire file as markdown.
+            fm = {};
+            md = String(raw ?? "").trimEnd() + "\n";
+          }
+
+          const fallbackTitle = slugFromFilename(file.name);
+          const title =
+            (typeof fm.title === "string" ? fm.title.trim() : "") ||
+            titleFromMarkdown(md, fallbackTitle) ||
+            fallbackTitle;
+
+          const slug =
+            (typeof fm.slug === "string" ? fm.slug.trim() : "") ||
+            (title ? slugifyTitle(title) : "") ||
+            slugFromFilename(file.name);
+
+          const summary =
+            (typeof fm.summary === "string" ? fm.summary.trim() : "") ||
+            summaryFromMarkdown(md) ||
+            "";
+
+          const stage: DocStage = isStage(fm.stage) ? fm.stage : "draft";
+          const archived = typeof fm.archived === "boolean" ? fm.archived : true; // imported docs default to unpublished
+          const visibility: DocVisibility = isVisibility(fm.visibility) ? fm.visibility : "internal";
+
+          const updatedAtRaw = typeof fm.updatedAt === "string" ? fm.updatedAt.trim() : "";
+          const versionRaw = typeof fm.version === "string" ? fm.version.trim() : updatedAtRaw;
+          const { version, updatedAt } = resolveVersionAndUpdatedAt({
+            version: versionRaw || null,
+            updatedAt: updatedAtRaw || null,
+          });
+
+          const owners = safeStringArray(fm.owners);
+          const topics = safeStringArray(fm.topics);
+          const collection = typeof fm.collection === "string" ? fm.collection.trim() : "";
+          const order = typeof fm.order === "number" ? fm.order : null;
+          const citations = safeCitations(fm.citations);
+          const approvals = safeApprovals(fm.approvals);
+
+          const importAudit: AuditEntry = {
+            at: new Date().toISOString(),
+            action: "import",
+            actor: actorName.trim() || undefined,
+            note: `from ${sourceName}`,
+          };
+          const nextAudit = [...safeAudit(fm.audit), importAudit].slice(-200);
+
+          const outFm: Record<string, unknown> = {
+            ...fm,
+            slug,
+            version,
+            title,
+            stage,
+            archived,
+            visibility,
+            summary,
+            updatedAt,
+            owners,
+            topics,
+            collection: collection || undefined,
+            order: typeof order === "number" && Number.isFinite(order) && order > 0 ? Math.trunc(order) : undefined,
+            citations: citations.length ? citations : undefined,
+            approvals: approvals.length ? approvals : undefined,
+            audit: nextAudit.length ? nextAudit : undefined,
+          };
+
+          const wantsMdx = file.name.toLowerCase().endsWith(".mdx");
+          let candidate = suggestedDocFileName(slug, version);
+          if (wantsMdx) candidate = candidate.replace(/\.md$/i, ".mdx");
+
+          // Avoid overwriting existing files.
+          let fileName = candidate;
+          if (await fileExists(handle, fileName)) {
+            const ext = wantsMdx ? ".mdx" : ".md";
+            const base = candidate.replace(/\.(md|mdx)$/i, "");
+            let n = 1;
+            while (await fileExists(handle, `${base}--import-${n}${ext}`)) n += 1;
+            fileName = `${base}--import-${n}${ext}`;
+          }
+
+          const outHandle = await handle.getFileHandle(fileName, { create: true });
+          const body = matter.stringify(md, stripUndefined(outFm) as Record<string, unknown>);
+          await writeHandleText(outHandle, body);
+
+          results.push({ sourceName, ok: true, fileName, slug: safeFilePart(slug), version });
+        } catch (e: unknown) {
+          results.push({
+            sourceName,
+            ok: false,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+    } finally {
+      setUploadBusy(false);
+      setUploadResults(results);
+    }
+
+    // Refresh docs list if at least one import succeeded.
+    if (results.some((r) => r.ok)) {
+      await refresh();
+      setUploadFiles([]);
+      setUploadPreviewIndex(0);
+    }
   }
 
   async function refresh(handle = dirHandle) {
@@ -899,6 +1087,197 @@ export function StudioClient() {
             </ul>
           </details>
         ) : null}
+
+        <details className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Convex status (optional backend)</summary>
+          <div className="mt-2 text-sm text-zinc-700">
+            {convexUrl ? (
+              <div>
+                Convex is <span className="font-semibold">configured</span> for this build: <code>{convexUrl}</code>
+                <div className="mt-2">
+                  Note: Studio’s browser editing and file import features are <span className="font-semibold">file-based</span> (they edit your <code>content/docs</code> folder).
+                  Convex is not required for uploading/importing docs here.
+                </div>
+              </div>
+            ) : (
+              <div>
+                Convex is <span className="font-semibold">not configured</span> (missing <code>NEXT_PUBLIC_CONVEX_URL</code>).
+                <div className="mt-2">
+                  This is OK: the docs site and Studio can run purely from files. If you want Convex features, set <code>NEXT_PUBLIC_CONVEX_URL</code> and run <code>pnpm dev</code> to start both Next and Convex.
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+      </section>
+
+      <section className="mt-8 card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl font-semibold">Step 1b: Upload / preview / import files</h2>
+            <p className="mt-1 text-zinc-700">
+              Choose Markdown files from your computer to <span className="font-semibold">preview</span> them here. If your docs folder is connected, you can also{" "}
+              <span className="font-semibold">import</span> them into <code>content/docs</code>.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="btn btn-secondary"
+              type="button"
+              disabled={uploadBusy || !uploadFiles.length}
+              onClick={() => {
+                setUploadFiles([]);
+                setUploadPreviewIndex(0);
+                setUploadResults([]);
+              }}
+            >
+              Clear selection
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <label className="block">
+              <div className="text-sm font-semibold text-zinc-800">Choose files</div>
+              <input
+                className="mt-2 w-full"
+                type="file"
+                multiple
+                accept=".md,.mdx,text/markdown,text/plain,.txt"
+                onChange={(e) => {
+                  const list = Array.from(e.target.files ?? []);
+                  setUploadFiles(list);
+                  setUploadPreviewIndex(0);
+                  setUploadResults([]);
+                }}
+                disabled={uploadBusy}
+              />
+              <div className="mt-2 text-sm text-zinc-600">
+                Tip: If you are on iPhone/iPad Safari, folder import may not work. Use Chrome or Edge on desktop for the best experience.
+              </div>
+            </label>
+
+            {uploadFiles.length ? (
+              <div className="rounded-xl border border-zinc-200 bg-white p-4">
+                <div className="text-sm font-semibold text-zinc-900">Selected</div>
+                <div className="mt-2 text-sm text-zinc-700">
+                  <span className="font-semibold">{uploadFiles.length}</span> file{uploadFiles.length === 1 ? "" : "s"} chosen
+                </div>
+                {uploadFiles.length > 1 ? (
+                  <label className="mt-3 block">
+                    <div className="text-sm font-semibold text-zinc-800">Preview which file?</div>
+                    <select
+                      className="mt-2 w-full control"
+                      value={String(uploadPreviewIndex)}
+                      onChange={(e) => setUploadPreviewIndex(Number(e.target.value) || 0)}
+                      disabled={uploadBusy}
+                    >
+                      {uploadFiles.map((f, idx) => (
+                        <option key={`${f.name}-${idx}`} value={String(idx)}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={onImportFiles}
+                    disabled={!uploadFiles.length || !dirHandle || uploadBusy}
+                  >
+                    Import into docs folder
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    onClick={() => {
+                      if (!uploadFiles.length) return;
+                      const f = uploadFiles[uploadPreviewIndex] ?? uploadFiles[0]!;
+                      downloadText(f.name, uploadPreviewText || "", "text/plain");
+                    }}
+                    disabled={!uploadFiles.length || uploadBusy}
+                  >
+                    Download preview text
+                  </button>
+                </div>
+
+                {!dirHandle ? (
+                  <div className="mt-3 text-sm text-zinc-600">
+                    To import into the project, connect your <code>content/docs</code> folder in Step 1.
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700">
+                No files selected yet.
+              </div>
+            )}
+
+            {uploadResults.length ? (
+              <details className="rounded-xl border border-zinc-200 bg-white p-4" open>
+                <summary className="cursor-pointer text-base font-semibold text-zinc-900">
+                  Import results ({uploadResults.filter((r) => r.ok).length} ok, {uploadResults.filter((r) => !r.ok).length} failed)
+                </summary>
+                <ul className="mt-3 list-disc space-y-1 pl-6 text-sm text-zinc-700">
+                  {uploadResults.map((r) => (
+                    <li key={`${r.sourceName}-${r.fileName ?? r.error ?? "x"}`}>
+                      <span className="font-semibold">{r.sourceName}</span>:{" "}
+                      {r.ok ? (
+                        <span>
+                          imported as <span className="font-semibold">{r.fileName}</span> (slug <span className="font-semibold">{r.slug}</span>, v{r.version})
+                        </span>
+                      ) : (
+                        <span className="text-rose-700">failed: {r.error}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold text-zinc-900">Preview</div>
+                <div className="text-sm text-zinc-600">{uploadPreviewName ? uploadPreviewName : "Choose a file to preview"}</div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className={uploadPreviewRender ? "btn btn-primary" : "btn btn-secondary"}
+                  type="button"
+                  onClick={() => setUploadPreviewRender(true)}
+                  disabled={!uploadPreviewText}
+                >
+                  Rendered
+                </button>
+                <button
+                  className={!uploadPreviewRender ? "btn btn-primary" : "btn btn-secondary"}
+                  type="button"
+                  onClick={() => setUploadPreviewRender(false)}
+                  disabled={!uploadPreviewText}
+                >
+                  Raw text
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[32rem] overflow-auto rounded-2xl border border-zinc-200 bg-white p-4">
+              {uploadPreviewText ? (
+                uploadPreviewRender ? (
+                  <Markdown value={uploadPreviewMarkdown || uploadPreviewText} />
+                ) : (
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-zinc-900">{uploadPreviewText}</pre>
+                )
+              ) : (
+                <div className="text-sm text-zinc-700">Nothing to preview yet.</div>
+              )}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -1394,6 +1773,13 @@ export function StudioClient() {
                       spellCheck={false}
                     />
                   </label>
+
+                  <details className="rounded-xl border border-zinc-200 bg-white p-4">
+                    <summary className="cursor-pointer text-base font-semibold text-zinc-900">Preview (rendered)</summary>
+                    <div className="mt-4 max-h-[28rem] overflow-auto rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                      <Markdown value={editMarkdown} />
+                    </div>
+                  </details>
 
                   <div className="flex flex-wrap items-center gap-2">
                     <button className="btn btn-primary" type="button" onClick={onSaveEdits} disabled={busy}>
