@@ -1,0 +1,22 @@
+{
+  "id": "product-launch",
+  "name": "Product Launch Note",
+  "description": "Cross-functional launch template for product, GTM, and support alignment.",
+  "tags": ["launch", "product", "ops"],
+  "requiredFields": [
+    { "key": "targetUser", "label": "Target User", "placeholder": "Protocol integrations team" },
+    { "key": "launchDate", "label": "Launch Date", "placeholder": "2026-03-15" },
+    { "key": "successMetric", "label": "Primary Success Metric", "placeholder": "Activation rate" }
+  ],
+  "sections": [
+    { "title": "Launch summary" },
+    { "title": "User value" },
+    { "title": "Scope and non-goals" },
+    { "title": "Operational checklist" },
+    { "title": "Metrics and monitoring" },
+    { "title": "FAQ" },
+    { "title": "Rollout plan (by cohort)", "optional": true },
+    { "title": "Support macros", "optional": true }
+  ]
+}
+

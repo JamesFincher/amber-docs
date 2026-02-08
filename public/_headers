@@ -1,0 +1,27 @@
+/docs.json
+  Cache-Control: public, max-age=300
+
+/search-index.json
+  Cache-Control: public, max-age=300
+
+/synonyms.json
+  Cache-Control: public, max-age=3600
+
+/chunks.json
+  Cache-Control: public, max-age=300
+
+/embeddings-manifest.json
+  Cache-Control: public, max-age=300
+
+/claims.json
+  Cache-Control: public, max-age=300
+
+/updates.json
+  Cache-Control: public, max-age=60
+
+/raw/*
+  Cache-Control: public, max-age=60
+
+/*
+  X-Content-Type-Options: nosniff
+

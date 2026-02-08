@@ -1,0 +1,9 @@
+{
+  "ai": ["llm", "model", "models"],
+  "docs": ["documentation", "doc", "docs-first"],
+  "review": ["verify", "verification", "fact-check"],
+  "official": ["published", "approved"],
+  "template": ["scaffold", "outline", "shape"],
+  "integrator": ["builder", "developer", "integration"]
+}
+

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { docs } from "@/lib/docs";
+import { listLatestDocs } from "@/lib/content/docs.server";
 
 export const dynamic = "force-static";
 
@@ -9,12 +9,14 @@ function baseUrl() {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = baseUrl().replace(/\/+$/, "");
+  const docs = listLatestDocs();
 
   return [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/docs`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${base}/paths`, changeFrequency: "weekly", priority: 0.65 },
     { url: `${base}/templates`, changeFrequency: "weekly", priority: 0.6 },
-    { url: `${base}/blocks`, changeFrequency: "weekly", priority: 0.5 },
+    { url: `${base}/blocks`, changeFrequency: "weekly", priority: 0.55 },
     ...docs.map((doc) => ({
       url: `${base}/docs/${encodeURIComponent(doc.slug)}`,
       lastModified: new Date(doc.updatedAt),
@@ -23,3 +25,4 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 }
+

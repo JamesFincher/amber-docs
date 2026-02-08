@@ -4,12 +4,18 @@ export type TemplateField = {
   placeholder: string;
 };
 
+export type TemplateSection = {
+  title: string;
+  optional?: boolean;
+};
+
 export type DocTemplate = {
   id: string;
   name: string;
   description: string;
-  sections: string[];
+  tags: string[];
   requiredFields: TemplateField[];
+  sections: TemplateSection[];
 };
 
 export type SectionPrompt = {
@@ -17,62 +23,11 @@ export type SectionPrompt = {
   prompt: string;
 };
 
-export const docTemplates: DocTemplate[] = [
-  {
-    id: "executive-brief",
-    name: "Executive Brief",
-    description: "Leadership summary with crisp strategy, outcomes, risks, and decisions.",
-    sections: [
-      "Context",
-      "Strategic objective",
-      "Key facts",
-      "Risks and mitigations",
-      "Decision required",
-      "Next 30/60/90 day plan",
-    ],
-    requiredFields: [
-      { key: "audience", label: "Audience", placeholder: "Executive team" },
-      { key: "timeframe", label: "Timeframe", placeholder: "Q2 2026" },
-      { key: "decision", label: "Decision Needed", placeholder: "Approve launch scope" },
-    ],
-  },
-  {
-    id: "product-launch",
-    name: "Product Launch Note",
-    description: "Cross-functional launch template for product, GTM, and support alignment.",
-    sections: [
-      "Launch summary",
-      "User value",
-      "Scope and non-goals",
-      "Operational checklist",
-      "Metrics and monitoring",
-      "FAQ",
-    ],
-    requiredFields: [
-      { key: "targetUser", label: "Target User", placeholder: "Protocol integrations team" },
-      { key: "launchDate", label: "Launch Date", placeholder: "2026-03-15" },
-      { key: "successMetric", label: "Primary Success Metric", placeholder: "Activation rate" },
-    ],
-  },
-  {
-    id: "partner-announcement",
-    name: "Partner Announcement",
-    description: "Public communication structure with legal and factual guardrails.",
-    sections: [
-      "Headline",
-      "Announcement summary",
-      "What is launching",
-      "Why this matters",
-      "Quotes",
-      "Fact-check checklist",
-    ],
-    requiredFields: [
-      { key: "partner", label: "Partner Name", placeholder: "Example Labs" },
-      { key: "legalName", label: "Legal Entity", placeholder: "Example Labs, Inc." },
-      { key: "publishDate", label: "Publish Date", placeholder: "2026-04-02" },
-    ],
-  },
-];
+export function resolveSections(template: DocTemplate, enabledOptional: Set<string>): string[] {
+  return template.sections
+    .filter((s) => !s.optional || enabledOptional.has(s.title))
+    .map((s) => s.title);
+}
 
 function renderFields(template: DocTemplate, inputValues: Record<string, string>): string {
   return template.requiredFields
@@ -80,17 +35,22 @@ function renderFields(template: DocTemplate, inputValues: Record<string, string>
     .join("\n");
 }
 
-function renderSectionList(template: DocTemplate): string {
-  return template.sections.map((section, idx) => `${idx + 1}. ${section}`).join("\n");
+function renderSectionList(sections: string[]): string {
+  return sections.map((section, idx) => `${idx + 1}. ${section}`).join("\n");
 }
 
-export function buildPrompt(template: DocTemplate, inputValues: Record<string, string>, topic: string): string {
-  const fields = renderFields(template, inputValues);
-  const sectionList = renderSectionList(template);
+export function buildPrompt(args: {
+  template: DocTemplate;
+  inputValues: Record<string, string>;
+  topic: string;
+  enabledOptional: Set<string>;
+}): string {
+  const fields = renderFields(args.template, args.inputValues);
+  const sectionList = renderSectionList(resolveSections(args.template, args.enabledOptional));
 
   return `You are an expert documentation strategist.
 
-Create a ${template.name} document for: ${topic || "<topic>"}
+Create a ${args.template.name} document for: ${args.topic || "<topic>"}
 
 Requirements:
 ${fields}
@@ -108,20 +68,22 @@ Quality bar:
 `;
 }
 
-export function buildSectionPromptPack(
-  template: DocTemplate,
-  inputValues: Record<string, string>,
-  topic: string,
-): SectionPrompt[] {
-  const fields = renderFields(template, inputValues);
-  const outline = renderSectionList(template);
-  const name = template.name;
+export function buildSectionPromptPack(args: {
+  template: DocTemplate;
+  inputValues: Record<string, string>;
+  topic: string;
+  enabledOptional: Set<string>;
+}): SectionPrompt[] {
+  const fields = renderFields(args.template, args.inputValues);
+  const sections = resolveSections(args.template, args.enabledOptional);
+  const outline = renderSectionList(sections);
+  const name = args.template.name;
 
-  return template.sections.map((section) => ({
+  return sections.map((section) => ({
     section,
     prompt: `You are drafting a ${name}.
 
-Topic: ${topic || "<topic>"}
+Topic: ${args.topic || "<topic>"}
 
 Requirements:
 ${fields}
@@ -139,14 +101,22 @@ Task:
   }));
 }
 
-export function buildMarkdownSkeleton(template: DocTemplate, inputValues: Record<string, string>, topic: string): string {
-  const header = `# ${topic || "Untitled"} (${template.name})`;
+export function buildMarkdownSkeleton(args: {
+  template: DocTemplate;
+  inputValues: Record<string, string>;
+  topic: string;
+  enabledOptional: Set<string>;
+}): string {
+  const header = `# ${args.topic || "Untitled"} (${args.template.name})`;
 
-  const metadata = template.requiredFields
-    .map((field) => `- **${field.label}:** ${inputValues[field.key] || "TBD"}`)
+  const metadata = args.template.requiredFields
+    .map((field) => `- **${field.label}:** ${args.inputValues[field.key] || "TBD"}`)
     .join("\n");
 
-  const sections = template.sections.map((section) => `## ${section}\n\n_TODO: add content._`).join("\n\n");
+  const sections = resolveSections(args.template, args.enabledOptional)
+    .map((section) => `## ${section}\n\n_TODO: add content._`)
+    .join("\n\n");
 
   return `${header}\n\n## Metadata\n${metadata}\n\n${sections}\n`;
 }
+

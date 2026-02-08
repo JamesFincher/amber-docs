@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { docs } from "@/lib/docs";
+import { listLatestDocs } from "@/lib/content/docs.server";
 import { DocsLibraryClient } from "./DocsLibraryClient";
 
 export const metadata = {
@@ -7,29 +7,67 @@ export const metadata = {
   description: "Browse draft, final, and official documentation",
 };
 
-export default function DocsIndexPage() {
+export default function DocsIndexPage({
+  searchParams,
+}: {
+  searchParams?: {
+    q?: string;
+    stage?: string;
+    topic?: string;
+    collection?: string;
+    bookmarked?: string;
+  };
+}) {
+  const docs = listLatestDocs().map((d) => ({
+    slug: d.slug,
+    title: d.title,
+    stage: d.stage,
+    updatedAt: d.updatedAt,
+    lastReviewedAt: d.lastReviewedAt,
+    owners: d.owners,
+    topics: d.topics,
+    collection: d.collection ?? null,
+    summary: d.summary,
+  }));
+
+  const stageParam = searchParams?.stage;
+  const stage: "all" | "draft" | "final" | "official" =
+    stageParam === "draft" || stageParam === "final" || stageParam === "official" ? stageParam : "all";
+
+  const initial = {
+    q: searchParams?.q ?? "",
+    stage,
+    topic: searchParams?.topic ?? "all",
+    collection: searchParams?.collection ?? "all",
+    bookmarkedOnly: searchParams?.bookmarked === "1",
+  };
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-6 py-12">
-      <header className="space-y-3">
-        <nav className="flex flex-wrap gap-3 text-sm">
-          <Link href="/" className="underline decoration-black/20 underline-offset-4 hover:decoration-black/40">
-            Home
-          </Link>
-          <Link
-            href="/templates"
-            className="underline decoration-black/20 underline-offset-4 hover:decoration-black/40"
-          >
-            Templates
-          </Link>
-        </nav>
-        <h1 className="text-3xl font-semibold">Documentation Library</h1>
-        <p className="text-zinc-600">
-          Browse docs by lifecycle stage and open each page for markdown content, AI checks, and linked
-          context.
+    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+      <header className="mb-8 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Docs library</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Documentation</h1>
+          </div>
+          <nav className="flex flex-wrap gap-2 text-sm">
+            <Link href="/paths" className="btn btn-secondary">
+              Paths
+            </Link>
+            <Link href="/templates" className="btn btn-secondary">
+              Templates
+            </Link>
+            <Link href="/blocks" className="btn btn-secondary">
+              Blocks
+            </Link>
+          </nav>
+        </div>
+        <p className="max-w-3xl text-zinc-600">
+          Search across titles, headings, and body text. Filter by stage and topic, then open a doc to
+          view AI checks, related context, and version history.
         </p>
       </header>
 
-      <DocsLibraryClient docs={docs} />
+      <DocsLibraryClient docs={docs} initial={initial} />
     </main>
   );
 }

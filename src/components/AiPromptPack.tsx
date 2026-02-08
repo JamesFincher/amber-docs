@@ -3,7 +3,7 @@ import type { DocRecord } from "@/lib/docs";
 import { extractH2Sections } from "@/lib/markdown";
 
 function buildReviewPrompt(args: {
-  doc: Pick<DocRecord, "title" | "slug" | "markdown">;
+  doc: Pick<DocRecord, "title" | "slug" | "version" | "markdown">;
   relatedDocs: Array<Pick<DocRecord, "title" | "slug" | "markdown">>;
 }): string {
   const context =
@@ -15,7 +15,7 @@ function buildReviewPrompt(args: {
 
   return `You are reviewing public-facing documentation for clarity and correctness.
 
-Doc: ${args.doc.title} (${args.doc.slug})
+Doc: ${args.doc.title} (${args.doc.slug}) v${args.doc.version}
 
 Related docs (context):
 ${context}
@@ -38,7 +38,7 @@ Output format:
 }
 
 function buildSectionPrompt(args: {
-  doc: Pick<DocRecord, "title" | "slug">;
+  doc: Pick<DocRecord, "title" | "slug" | "version">;
   sectionHeading: string;
   sectionBody: string;
   relatedDocs: Array<Pick<DocRecord, "title" | "slug" | "markdown">>;
@@ -52,7 +52,7 @@ function buildSectionPrompt(args: {
 
   return `You are helping write and verify public-facing documentation.
 
-Doc: ${args.doc.title} (${args.doc.slug})
+Doc: ${args.doc.title} (${args.doc.slug}) v${args.doc.version}
 Section: ${args.sectionHeading}
 
 Related docs (context):
@@ -129,4 +129,3 @@ export function AiPromptPack({ doc, relatedDocs }: { doc: DocRecord; relatedDocs
     </section>
   );
 }
-

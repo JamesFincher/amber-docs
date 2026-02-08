@@ -1,0 +1,21 @@
+[
+  {
+    "id": "not-financial-advice",
+    "title": "Not Financial Advice",
+    "body": "This documentation is provided for informational purposes only and does not constitute financial, legal, or tax advice.",
+    "tags": ["legal", "public"]
+  },
+  {
+    "id": "no-warranty",
+    "title": "No Warranty",
+    "body": "This documentation is provided \"as is\" without warranties of any kind, express or implied. Use at your own risk.",
+    "tags": ["legal", "public"]
+  },
+  {
+    "id": "forward-looking",
+    "title": "Forward-Looking Statements",
+    "body": "Some statements may be forward-looking and involve risks and uncertainties. Actual outcomes may differ materially.",
+    "tags": ["legal", "public"]
+  }
+]
+

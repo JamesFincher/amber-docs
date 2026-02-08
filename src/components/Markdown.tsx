@@ -17,6 +17,7 @@ export function Markdown({ value }: { value: string }) {
       h5: [...((defaultSchema.attributes?.h5 as string[]) ?? []), "id"],
       h6: [...((defaultSchema.attributes?.h6 as string[]) ?? []), "id"],
       a: [...((defaultSchema.attributes?.a as string[]) ?? []), "aria-label"],
+      img: [...((defaultSchema.attributes?.img as string[]) ?? []), "src", "alt", "title", "width", "height"],
     },
   };
 
@@ -32,7 +33,7 @@ export function Markdown({ value }: { value: string }) {
   }
 
   return (
-    <div className="prose prose-zinc max-w-none prose-headings:scroll-mt-24 prose-a:text-zinc-900 prose-a:decoration-zinc-400 hover:prose-a:decoration-zinc-900 prose-pre:rounded-lg prose-pre:border prose-pre:border-black/10 prose-pre:bg-zinc-950 prose-pre:text-zinc-50 prose-code:rounded prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.9em] prose-code:text-zinc-900">
+    <div className="prose prose-zinc max-w-none prose-headings:scroll-mt-28 prose-headings:font-display prose-a:text-zinc-950 prose-a:decoration-black/20 hover:prose-a:decoration-black/40 prose-pre:rounded-2xl prose-pre:border prose-pre:border-black/10 prose-pre:bg-zinc-950 prose-pre:text-zinc-50 prose-code:rounded prose-code:bg-black/5 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.9em] prose-code:text-zinc-900">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeSanitize, schema]]}

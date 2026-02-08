@@ -2,31 +2,114 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --paper: #f6f2ea;
-  --paper-2: #f2eee6;
-  --ink: #141414;
-  --ink-2: rgba(20, 20, 20, 0.72);
-  --accent: #0f766e;
-  --font-geist-sans: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-geist-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --bg-0: #faf7f2;
+  --bg-1: #f3efe7;
+  --ink: #0f1115;
+  --muted: rgba(15, 17, 21, 0.68);
+  --accent: #dc2626;
+  --accent-2: #0891b2;
+  --ring: rgba(15, 17, 21, 0.12);
+
+  /* next/font variables */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
 }
 
 @theme inline {
-  --color-background: var(--paper);
+  --color-background: var(--bg-0);
   --color-foreground: var(--ink);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 body {
   color: var(--ink);
   background:
-    radial-gradient(1100px 600px at 20% -10%, rgba(255, 255, 255, 0.9) 0%, transparent 60%),
-    radial-gradient(900px 520px at 92% 0%, rgba(15, 118, 110, 0.16) 0%, transparent 60%),
-    linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    radial-gradient(1200px 700px at 5% -10%, rgba(255, 255, 255, 0.95) 0%, transparent 60%),
+    radial-gradient(900px 520px at 92% 0%, rgba(8, 145, 178, 0.18) 0%, transparent 62%),
+    radial-gradient(900px 540px at 10% 110%, rgba(220, 38, 38, 0.12) 0%, transparent 64%),
+    linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 100%);
   font-family: var(--font-sans);
 }
 
 ::selection {
-  background: rgba(15, 118, 110, 0.18);
+  background: rgba(220, 38, 38, 0.18);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.card {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 0.55rem 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--ring), 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.96) 0%, rgba(190, 24, 93, 0.96) 100%);
+  color: white;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.btn-primary:hover {
+  filter: brightness(0.98);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--ink);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chip-muted {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.68);
+}
+
+.chip-outline {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  color: rgba(0, 0, 0, 0.72);
+  background: rgba(255, 255, 255, 0.55);
 }

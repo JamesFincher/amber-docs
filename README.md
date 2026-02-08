@@ -6,13 +6,33 @@ Public documentation workspace for Amber Protocol, designed for human readers an
 
 - `/` — Product landing page for the docs workspace
 - `/docs` — Documentation library with lifecycle stage badges (Draft / Final / Official)
-- `/docs/[slug]` — Individual markdown docs with AI checks and related context
-- `/docs.json` — Machine-readable index of docs metadata (for integrators)
-- `/templates` — Reusable template builder that outputs AI prompts + markdown scaffolds
-- `/blocks` — Reusable snippet library (disclaimers + glossary)
+- `/docs/[slug]` — Latest doc version (AI checks, notes, feedback, related context)
+- `/docs/[slug]/v/[version]` — Pinned historical doc version
+- `/docs/[slug]/diff` — Diff viewer between doc versions
+- `/paths` — Collections + recommended reading paths (breadcrumbs + prev/next)
+- `/templates` — Template tool (prompt pack + markdown scaffold + optional sections)
+- `/blocks` — Blocks library (disclaimers + glossary + local custom blocks)
+
+### Machine endpoints (integrators)
+
+- `/docs.json` — Versioned docs index (schema version + content hashes)
+- `/search-index.json` — Build-time search index used by the UI
+- `/chunks.json` — Chunked docs export with stable chunk IDs (RAG-friendly)
+- `/embeddings-manifest.json` — Doc + chunk content hashes (sync pipelines)
+- `/updates.json` — Pollable build ID + latest doc hashes
+- `/claims.json` — Lightweight extracted number/date claims per doc
+- `/raw/[slug]` — Raw markdown for the latest version
+- `/raw/v/[slug]/[version]` — Raw markdown for a pinned version
 
 
-## Template tool (new)
+## Content model
+
+- Docs live in `content/docs/*.md` (YAML frontmatter + markdown body).
+- Templates live in `content/templates/*.json`.
+- Blocks (disclaimers + glossary) live in `content/blocks/*.json`.
+- Search synonyms live in `content/search/synonyms.json`.
+
+## Template tool
 
 The template tool lets you standardize document structures across teams.
 
@@ -38,7 +58,7 @@ Open http://localhost:3000.
 pnpm qa
 ```
 
-`pnpm build` runs QA automatically (duplicate slugs, internal links, required metadata rules).
+`pnpm build` runs QA automatically (frontmatter schema, internal links, assets, Official gates, external links).
 
 ## Deployment (Cloudflare Pages)
 
@@ -71,6 +91,11 @@ Add these GitHub repo secrets:
 - `CLOUDFLARE_ACCOUNT_ID`
 
 Then pushing to `main` or `work` triggers deployment automatically.
+
+Optional secrets (webhooks):
+
+- `DOCS_WEBHOOK_URL`
+- `DOCS_WEBHOOK_SECRET`
 
 ## Convex
 

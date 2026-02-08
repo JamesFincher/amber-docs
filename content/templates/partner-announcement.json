@@ -1,0 +1,21 @@
+{
+  "id": "partner-announcement",
+  "name": "Partner Announcement",
+  "description": "Public communication structure with legal and factual guardrails.",
+  "tags": ["comms", "public"],
+  "requiredFields": [
+    { "key": "partner", "label": "Partner Name", "placeholder": "Example Labs" },
+    { "key": "legalName", "label": "Legal Entity", "placeholder": "Example Labs, Inc." },
+    { "key": "publishDate", "label": "Publish Date", "placeholder": "2026-04-02" }
+  ],
+  "sections": [
+    { "title": "Headline" },
+    { "title": "Announcement summary" },
+    { "title": "What is launching" },
+    { "title": "Why this matters" },
+    { "title": "Quotes", "optional": true },
+    { "title": "Fact-check checklist" },
+    { "title": "Legal checklist", "optional": true }
+  ]
+}
+

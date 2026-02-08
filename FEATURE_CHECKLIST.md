@@ -38,3 +38,55 @@ This checklist tracks implementation of the features described in `PRODUCT_MINDM
 - [x] Content QA script: heading structure sanity checks
 - [x] Wire QA into `pnpm build`
 - [x] CI passes: `pnpm lint`, `pnpm typecheck`, `pnpm build`
+
+---
+
+## Build-Out (vNext)
+
+These are the next features implied by the “Build-Out vNext” section in `PRODUCT_MINDMAP.md`.
+
+### Reader Experience
+- [x] Information architecture: collections/series + reading paths
+- [x] Breadcrumbs + prev/next navigation
+- [x] Search v2: build-time index + fuzzy matching (+ optional synonyms)
+- [x] Doc versioning: version selector + “latest” alias
+- [x] Doc-to-doc diffs (between versions)
+- [x] Feedback widget (helpful/unhelpful + report issue)
+- [x] Bookmarks / saved searches
+
+### Writing System
+- [x] File-based docs source (move docs out of `src/lib/docs.ts`)
+- [x] Frontmatter schema validation (stage/owners/reviewedAt/topics/citations/approvals)
+- [x] Assets pipeline (images/diagrams)
+- [ ] MDX support (optional)
+- [x] Template authoring: schema-driven templates + optional/conditional sections
+- [x] Template sharing: team registry + export/import
+- [x] Blocks: tags + search + custom blocks
+
+### Review + Trust
+- [x] Promotion gates: Draft→Final→Official with required approvals
+- [x] Revision history UI + diff view (doc + per-section diffs)
+- [x] Inline comments/notes with resolved state
+- [x] Automated claim extraction (numbers/entities) + citation-required policy
+- [x] Terminology enforcement against glossary
+- [x] External link validation in CI (timeouts + redirects)
+- [ ] Contradiction scans vs canonical docs (optional)
+
+### Integrator Experience
+- [x] Versioned `docs.json` schema (documented contract)
+- [ ] ETag/Last-Modified for `docs.json` and `raw/*`
+- [x] Chunked export for RAG (stable chunk IDs)
+- [x] Embeddings manifest (hashes + update diffs)
+- [x] Webhooks for doc updates (signed payloads)
+
+### Operations / QA
+- [x] PR preview deploys (Cloudflare Pages) + preview URL comment
+- [ ] Build performance budgets + caching strategy
+- [x] Security: secret scanning + dependency auditing
+- [x] Accessibility checks (CI) + keyboard navigation QA
+- [x] Analytics (privacy-safe) + error tracking (client + 404s)
+
+### Security/Admin (If/When Hybrid)
+- [ ] Private docs with auth + roles + redaction rules
+- [ ] Audit log for promotions/approvals
+- [ ] Export public site from approved-only content
