@@ -239,6 +239,67 @@ describe("docsWorkflow (file lifecycle)", () => {
     }
   });
 
+  test("finalizeDocVersion clears lastReviewedAt when moving from official to final", async () => {
+    const dir = mkTmpDir();
+    try {
+      process.env.AMBER_DOCS_CONTENT_DIR = dir;
+      const wf = await import("../../src/lib/content/docsWorkflow.server");
+
+      const created = wf.createDocFile({
+        slug: "a",
+        title: "A",
+        summary: "s",
+        updatedAt: "2026-01-01",
+        published: true,
+      });
+
+      wf.promoteDocVersionToOfficial({
+        slug: "a",
+        version: created.version,
+        reviewedAt: "2026-01-02",
+        approvals: [{ name: "alice", date: "2026-01-02" }],
+      });
+
+      let parsed = wf.readDocFile(created.filePath);
+      expect(parsed.frontmatter.stage).toBe("official");
+      expect(parsed.frontmatter.lastReviewedAt).toBe("2026-01-02");
+
+      wf.finalizeDocVersion({ slug: "a", version: created.version });
+      parsed = wf.readDocFile(created.filePath);
+      expect(parsed.frontmatter.stage).toBe("final");
+      expect(parsed.frontmatter.lastReviewedAt).toBeUndefined();
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  test("promoteDocVersionToOfficial defaults reviewedAt to today when omitted", async () => {
+    const dir = mkTmpDir();
+    try {
+      process.env.AMBER_DOCS_CONTENT_DIR = dir;
+      const wf = await import("../../src/lib/content/docsWorkflow.server");
+
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-02-08T12:00:00"));
+
+      const created = wf.createDocFile({
+        slug: "a",
+        title: "A",
+        summary: "s",
+        updatedAt: "2026-02-01",
+        published: true,
+      });
+
+      wf.promoteDocVersionToOfficial({ slug: "a", version: created.version });
+      const parsed = wf.readDocFile(created.filePath);
+      expect(parsed.frontmatter.stage).toBe("official");
+      expect(parsed.frontmatter.lastReviewedAt).toBe("2026-02-08");
+    } finally {
+      vi.useRealTimers();
+      cleanup(dir);
+    }
+  });
+
   test("deleteDocVersion and deleteAllDocVersions remove files", async () => {
     const dir = mkTmpDir();
     try {

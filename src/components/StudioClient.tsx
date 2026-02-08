@@ -1096,7 +1096,7 @@ export function StudioClient() {
         <div className="card p-6">
           <h2 className="font-display text-2xl font-semibold">Step 3: Publish / edit an existing doc</h2>
           <p className="mt-1 text-zinc-700">
-            Pick a file, then use the buttons to publish, unpublish, finalize, or delete it.
+            Pick a file, then use the buttons to publish/unpublish it, mark it Final or Official, create a new version, or delete it.
           </p>
 
           <label className="mt-4 block">

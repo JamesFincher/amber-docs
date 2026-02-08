@@ -10,6 +10,7 @@ import { buildMarkdownSkeleton, buildPrompt } from "@/lib/templates";
 import type { Approval, Citation, DocStage, DocVisibility } from "@/lib/docs";
 import { isoDate, resolveVersionAndUpdatedAt, safeFilePart, suggestedDocFileName } from "@/lib/content/docsWorkflow.shared";
 import { geminiGenerateText } from "@/lib/ai/gemini";
+import { computeWriteReady, deletePolicy, officialPatch, stagePatch } from "@/lib/ai/workspacePolicy";
 import type { AgentTranscriptItem, ToolDescriptor } from "@/lib/ai/castleAgent";
 import { runAgentLoop } from "@/lib/ai/castleAgent";
 import { saveStudioImport } from "@/lib/studioImport";
@@ -203,12 +204,12 @@ function slugifyTitle(title: string): string {
   return base || "new-doc";
 }
 
-async function pickDirectoryHandle(): Promise<FsDirectoryHandle | null> {
+async function pickDirectoryHandle(mode: "read" | "readwrite"): Promise<FsDirectoryHandle | null> {
   const picker = (window as Window & {
     showDirectoryPicker?: (opts?: { mode?: "read" | "readwrite" }) => Promise<unknown>;
   }).showDirectoryPicker;
   if (!picker) return null;
-  return (await picker({ mode: "readwrite" })) as FsDirectoryHandle;
+  return (await picker({ mode })) as FsDirectoryHandle;
 }
 
 async function readHandleText(fileHandle: FsFileHandle): Promise<string> {
@@ -398,11 +399,15 @@ export function AiAssistantClient({
   const [includeBlocks, setIncludeBlocks] = useState(true);
   const [includeTemplates, setIncludeTemplates] = useState(true);
   const [allowFileWrites, setAllowFileWrites] = useState(false);
+  const [allowDeletes, setAllowDeletes] = useState(false);
 
   const [dirHandle, setDirHandle] = useState<FsDirectoryHandle | null>(null);
+  const [workspaceMode, setWorkspaceMode] = useState<"read" | "readwrite">("read");
   const [workspaceDocs, setWorkspaceDocs] = useState<LocalDoc[]>([]);
   const [workspaceErrors, setWorkspaceErrors] = useState<string[]>([]);
   const workspaceDocsRef = useRef<LocalDoc[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
+  const [presetDoc, setPresetDoc] = useState<{ slug: string; version: string | null } | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -459,6 +464,7 @@ export function AiAssistantClient({
       const version = sp.get("version");
       if (task && task.trim()) setInput(task);
       else if (doc && doc.trim()) {
+        setPresetDoc({ slug: doc.trim(), version: version ? version.trim() : null });
         setInput(
           `Review the document slug \"${doc.trim()}\"${version ? ` version \"${version.trim()}\"` : ""}.\n\nUse tools (get_doc, search_docs, get_relevant_chunks) as needed.\n\nDo:\n1) Summarize in plain language.\n2) List concrete factual claims and mark (SOURCE NEEDED: ...) for each.\n3) Identify missing sections or unclear steps.\n4) Propose a revised Markdown draft. Include the full draft in final.draft.docText.`,
         );
@@ -500,12 +506,14 @@ export function AiAssistantClient({
   }
 
   async function onConnectWorkspace() {
-    const handle = await pickDirectoryHandle();
+    const mode = allowFileWrites ? "readwrite" : "read";
+    const handle = await pickDirectoryHandle(mode);
     if (!handle) {
       alert("This browser does not support connecting to a folder. Use Chrome or Edge.");
       return;
     }
     setDirHandle(handle);
+    setWorkspaceMode(mode);
     await refreshWorkspace(handle);
   }
 
@@ -570,9 +578,9 @@ export function AiAssistantClient({
       },
       {
         name: "workspace_status",
-        description: "Return whether a local docs folder is connected and whether file writes are allowed.",
+        description: "Return whether a local docs folder is connected and what permissions are available.",
         args: "{}",
-        returns: "{ connected: boolean, allowFileWrites: boolean, docsCount: number }",
+        returns: '{ connected: boolean, mode: "read"|"readwrite", allowFileWrites: boolean, allowDeletes: boolean, writeReady: boolean, docsCount: number }',
       },
       {
         name: "workspace_list_docs",
@@ -621,8 +629,14 @@ export function AiAssistantClient({
       },
       {
         name: "workspace_finalize",
-        description: "Finalize a doc (set stage=official and publish it).",
+        description: "Mark a doc as Final (stage=final). Does not publish/unpublish.",
         args: "{ slug: string, version: string }",
+        returns: "{ ok: boolean }",
+      },
+      {
+        name: "workspace_official",
+        description: "Mark a doc as Official (stage=official). Optionally set lastReviewedAt and approvals.",
+        args: "{ slug: string, version: string, reviewedAt?: string, approvals?: Array<{ name: string, date: string }> }",
         returns: "{ ok: boolean }",
       },
       {
@@ -634,7 +648,7 @@ export function AiAssistantClient({
       {
         name: "workspace_delete_doc",
         description: "Delete a doc version file from the connected folder.",
-        args: "{ slug: string, version: string }",
+        args: "{ slug: string, version: string, confirm: boolean }",
         returns: "{ ok: boolean }",
       },
       {
@@ -663,6 +677,11 @@ Guidelines:
 - Use simple, scannable writing (short paragraphs, bullets, numbered steps).
 - When you are missing a source, write "(SOURCE NEEDED: ...)".
 - Prefer tool calls for facts and for reading existing docs.
+- Doc lifecycle:
+  - publish/unpublish is separate from stage (archived=false/true)
+  - Final means stage=final
+  - Official means stage=official and should include lastReviewedAt (and approvals if provided)
+- Do NOT delete files unless the user explicitly asked and workspace_status says allowDeletes=true. The delete tool requires confirm=true.
 - Blocks are ${blocksAvailable}. Templates are ${templatesAvailable}.
 - If a request requires editing files but workspace is not connected or writes are disabled, explain what to click next.
 
@@ -704,10 +723,24 @@ Output JSON only.`;
         // ignore
       }
 
-      const base: AgentTranscriptItem[] = [...messages, { role: "user", content: text }];
+      const userItem: AgentTranscriptItem = { role: "user", content: text };
+      const base: AgentTranscriptItem[] = [...messages, userItem];
+      setMessages(base);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       await ensureIndexesLoaded();
       if (includeContext) await ensureChunksLoaded();
+
+      const ensureWorkspaceWriteReady = (): FsDirectoryHandle => {
+        if (!dirHandle) throw new Error('No workspace folder connected. Click "Choose docs folder" first.');
+        if (!allowFileWrites) throw new Error('File edits are disabled. Turn on "Allow file edits" first.');
+        if (workspaceMode !== "readwrite") {
+          throw new Error('Folder is connected in read-only mode. Turn on "Allow file edits", then click "Reconnect folder".');
+        }
+        return dirHandle;
+      };
 
       const toolFns: Record<string, (args: unknown) => Promise<unknown>> = {
         search_docs: async (args) => {
@@ -875,7 +908,17 @@ Output JSON only.`;
         },
 
         workspace_status: async () => {
-          return { connected: !!dirHandle, allowFileWrites, docsCount: workspaceDocsRef.current.length };
+          const connected = !!dirHandle;
+          const mode = workspaceMode;
+          const writeReady = computeWriteReady({ connected, mode, allowFileWrites });
+          return {
+            connected,
+            mode,
+            allowFileWrites,
+            allowDeletes,
+            writeReady,
+            docsCount: workspaceDocsRef.current.length,
+          };
         },
 
         workspace_list_docs: async (args) => {
@@ -909,8 +952,7 @@ Output JSON only.`;
         },
 
         workspace_create_doc: async (args) => {
-          if (!dirHandle) throw new Error("No workspace folder connected");
-          if (!allowFileWrites) throw new Error("File writes are disabled in settings");
+          const root = ensureWorkspaceWriteReady();
 
           const a = asRecord(args);
           const slug = typeof a.slug === "string" ? a.slug.trim() : "";
@@ -939,7 +981,7 @@ Output JSON only.`;
           });
 
           const fileName = suggestedDocFileName(slug, version);
-          const handle = await dirHandle.getFileHandle(fileName, { create: true });
+          const handle = await root.getFileHandle(fileName, { create: true });
 
           const actor = (() => {
             try {
@@ -976,13 +1018,12 @@ Output JSON only.`;
 
           const body = matter.stringify(markdown, stripUndefined(fm) as Record<string, unknown>);
           await writeHandleText(handle, body);
-          await refreshWorkspace(dirHandle);
+          await refreshWorkspace(root);
           return { ok: true, fileName };
         },
 
         workspace_update_doc: async (args) => {
-          if (!dirHandle) throw new Error("No workspace folder connected");
-          if (!allowFileWrites) throw new Error("File writes are disabled in settings");
+          const root = ensureWorkspaceWriteReady();
 
           const a = asRecord(args);
           const slug = typeof a.slug === "string" ? a.slug : "";
@@ -1029,12 +1070,14 @@ Output JSON only.`;
           if (nextStage === "official") {
             const lr = typeof nextFm.lastReviewedAt === "string" ? String(nextFm.lastReviewedAt).trim() : "";
             if (!lr) nextFm.lastReviewedAt = typeof nextFm.updatedAt === "string" ? nextFm.updatedAt : isoDate(new Date());
+          } else {
+            nextFm.lastReviewedAt = undefined;
           }
 
           const md = patchMarkdown ?? doc.markdown;
           const body = matter.stringify(md, stripUndefined(nextFm) as Record<string, unknown>);
           await writeHandleText(doc.handle, body);
-          await refreshWorkspace(dirHandle);
+          await refreshWorkspace(root);
           return { ok: true, fileName: doc.fileName };
         },
 
@@ -1063,7 +1106,7 @@ Output JSON only.`;
           await toolFns.workspace_update_doc({
             slug,
             version,
-            patchFrontmatter: { stage },
+            patchFrontmatter: stagePatch(stage, { now: new Date() }),
             auditAction: "ai:set_stage",
             auditNote: `to ${stage}`,
           });
@@ -1078,15 +1121,37 @@ Output JSON only.`;
           await toolFns.workspace_update_doc({
             slug,
             version,
-            patchFrontmatter: { stage: "official", archived: false },
+            patchFrontmatter: stagePatch("final", { now: new Date() }),
             auditAction: "ai:finalize",
           });
           return { ok: true };
         },
 
+        workspace_official: async (args) => {
+          const a = asRecord(args);
+          const slug = typeof a.slug === "string" ? a.slug : "";
+          const version = typeof a.version === "string" ? a.version : "";
+          const reviewedAt = typeof a.reviewedAt === "string" ? a.reviewedAt.trim() : "";
+          const approvals = safeApprovals(a.approvals);
+          const includeApprovals = a.approvals !== undefined;
+          if (!slug || !version) throw new Error("workspace_official requires slug and version");
+          await toolFns.workspace_update_doc({
+            slug,
+            version,
+            patchFrontmatter: officialPatch({
+              reviewedAt: reviewedAt || null,
+              approvals,
+              includeApprovals,
+              now: new Date(),
+            }),
+            auditAction: "ai:official",
+            auditNote: reviewedAt ? `reviewedAt ${reviewedAt}` : undefined,
+          });
+          return { ok: true };
+        },
+
         workspace_clone_version: async (args) => {
-          if (!dirHandle) throw new Error("No workspace folder connected");
-          if (!allowFileWrites) throw new Error("File writes are disabled in settings");
+          const root = ensureWorkspaceWriteReady();
 
           const a = asRecord(args);
           const slug = typeof a.slug === "string" ? a.slug : "";
@@ -1099,7 +1164,7 @@ Output JSON only.`;
 
           const { version, updatedAt } = resolveVersionAndUpdatedAt({ version: newVersion.trim(), updatedAt: null });
           const fileName = suggestedDocFileName(slug, version);
-          const handle = await dirHandle.getFileHandle(fileName, { create: true });
+          const handle = await root.getFileHandle(fileName, { create: true });
 
           const fm: Record<string, unknown> = {
             ...baseDoc.frontmatter,
@@ -1121,22 +1186,25 @@ Output JSON only.`;
 
           const body = matter.stringify(baseDoc.markdown, stripUndefined(fm) as Record<string, unknown>);
           await writeHandleText(handle, body);
-          await refreshWorkspace(dirHandle);
+          await refreshWorkspace(root);
           return { ok: true, fileName };
         },
 
         workspace_delete_doc: async (args) => {
-          if (!dirHandle) throw new Error("No workspace folder connected");
-          if (!allowFileWrites) throw new Error("File writes are disabled in settings");
+          const root = ensureWorkspaceWriteReady();
 
           const a = asRecord(args);
           const slug = typeof a.slug === "string" ? a.slug : "";
           const version = typeof a.version === "string" ? a.version : "";
+          const confirm = a.confirm === true;
+          const policy = deletePolicy({ writeReady: true, allowDeletes, confirm });
+          if (!policy.ok) throw new Error(policy.reason);
+          if (!slug || !version) throw new Error("workspace_delete_doc requires slug and version");
           const doc = workspaceDocsRef.current.find((d) => d.slug === slug && d.version === version);
           if (!doc) throw new Error(`Doc not found in workspace: ${slug}@${version}`);
 
-          await dirHandle.removeEntry(doc.fileName);
-          await refreshWorkspace(dirHandle);
+          await root.removeEntry(doc.fileName);
+          await refreshWorkspace(root);
           return { ok: true };
         },
 
@@ -1150,6 +1218,36 @@ Output JSON only.`;
       };
 
       const withContext: AgentTranscriptItem[] = [...base];
+      try {
+        const ws = await toolFns.workspace_status({});
+        withContext.push({
+          role: "tool",
+          content: JSON.stringify({ tool: "workspace_status", ok: true, result: ws }, null, 2),
+        });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        withContext.push({
+          role: "tool",
+          content: JSON.stringify({ tool: "workspace_status", ok: false, error: msg }, null, 2),
+        });
+      }
+
+      if (presetDoc) {
+        try {
+          const r = await toolFns.get_doc({ slug: presetDoc.slug, version: presetDoc.version ?? undefined, maxChars: 18_000 });
+          withContext.push({
+            role: "tool",
+            content: JSON.stringify({ tool: "get_doc", ok: true, result: r }, null, 2),
+          });
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          withContext.push({
+            role: "tool",
+            content: JSON.stringify({ tool: "get_doc", ok: false, error: msg }, null, 2),
+          });
+        }
+      }
+
       if (includeContext) {
         const ctx = await toolFns.get_relevant_chunks({ query: text, limit: 6, maxCharsPerChunk: 800 });
         withContext.push({
@@ -1165,6 +1263,7 @@ Output JSON only.`;
           prompt,
           temperature: 0.2,
           maxOutputTokens: 4096,
+          signal: controller.signal,
         });
         return out.text;
       };
@@ -1184,8 +1283,18 @@ Output JSON only.`;
       }
       setInput("");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      const isAbort =
+        (e instanceof DOMException && e.name === "AbortError") ||
+        (e instanceof Error && e.name === "AbortError") ||
+        (e instanceof Error && /aborted/i.test(e.message));
+      if (isAbort) {
+        setError(null);
+        setMessages((prev) => [...prev, { role: "assistant", content: "Canceled." }]);
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
+      abortRef.current = null;
       setBusy(false);
     }
   }
@@ -1234,6 +1343,18 @@ Output JSON only.`;
               type="password"
               autoComplete="off"
             />
+            <div className="mt-2 text-sm text-zinc-600">
+              Get a key from{" "}
+              <a
+                className="font-semibold underline decoration-black/10 underline-offset-4 hover:decoration-black/30"
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Google AI Studio
+              </a>
+              . Stored only in this browser.
+            </div>
           </label>
 
           <label className="block">
@@ -1244,7 +1365,15 @@ Output JSON only.`;
               onChange={(e) => setModel(e.target.value)}
               placeholder="Example: gemini-2.0-flash"
               autoComplete="off"
+              list="gemini-models"
             />
+            <datalist id="gemini-models">
+              <option value="gemini-2.0-flash" />
+              <option value="gemini-2.0-pro" />
+              <option value="gemini-1.5-flash" />
+              <option value="gemini-1.5-pro" />
+            </datalist>
+            <div className="mt-2 text-sm text-zinc-600">Tip: Use the default unless you know you need a different model.</div>
           </label>
         </div>
 
@@ -1282,7 +1411,11 @@ Output JSON only.`;
               type="checkbox"
               className="h-5 w-5"
               checked={allowFileWrites}
-              onChange={(e) => setAllowFileWrites(e.target.checked)}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setAllowFileWrites(next);
+                if (!next) setAllowDeletes(false);
+              }}
             />
           </label>
         </div>
@@ -1310,9 +1443,37 @@ Output JSON only.`;
           <div className="mt-3 text-sm text-zinc-700">
             Connected: <span className="font-semibold">{dirHandle.name}</span> · Docs found:{" "}
             <span className="font-semibold">{workspaceDocs.length}</span>
-            {allowFileWrites ? " · File edits enabled" : " · Read-only (file edits disabled)"}
+            {allowFileWrites ? (
+              workspaceMode === "readwrite" ? (
+                " · Read + write access granted"
+              ) : (
+                ' · "Allow file edits" is on, but this folder is connected read-only (click Reconnect folder)'
+              )
+            ) : (
+              " · Read-only (file edits disabled)"
+            )}
           </div>
         ) : null}
+
+        <details className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-red-900">Advanced (danger): Permanent actions</summary>
+          <div className="mt-2 text-sm text-red-900">
+            Turning this on lets the AI delete doc files. Deleting is permanent and cannot be undone.
+          </div>
+          <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-white px-4 py-3">
+            <span className="font-semibold text-red-900">Allow deletes</span>
+            <input
+              type="checkbox"
+              className="h-5 w-5"
+              checked={allowDeletes}
+              onChange={(e) => setAllowDeletes(e.target.checked)}
+              disabled={!allowFileWrites}
+            />
+          </label>
+          <div className="mt-2 text-sm text-red-900">
+            Safety: the delete tool still requires <code>confirm=true</code>.
+          </div>
+        </details>
 
         {workspaceErrors.length ? (
           <details className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
@@ -1391,11 +1552,11 @@ Output JSON only.`;
             disabled={busy}
             onClick={() =>
               setInput(
-                "Help me publish, unpublish, or finalize a document.\n\nIf needed, tell me exactly what to click to connect my docs folder and enable file edits. Then do the publish/unpublish/finalize action.",
+                "Help me publish or unpublish a document, or mark it Final or Official.\n\nIf needed, tell me exactly what to click to connect my docs folder and enable file edits. Then do the publish/unpublish/status action.",
               )
             }
           >
-            Publish/finalize
+            Publish / status
           </button>
         </div>
 
@@ -1438,6 +1599,15 @@ Output JSON only.`;
           <button className="btn btn-primary" type="button" onClick={onSend} disabled={busy || !input.trim()}>
             {busy ? "Working..." : "Send"}
           </button>
+          {busy ? (
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={() => abortRef.current?.abort()}
+            >
+              Cancel
+            </button>
+          ) : null}
           <button
             className="btn btn-secondary"
             type="button"

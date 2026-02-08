@@ -37,6 +37,28 @@ describe("geminiGenerateText", () => {
     expect(String(init?.body)).toContain("Say hi");
   });
 
+  test("passes AbortSignal through to fetch", async () => {
+    const ac = new AbortController();
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (_url, init) => {
+      expect(init?.signal).toBe(ac.signal);
+      return new Response(
+        JSON.stringify({
+          candidates: [{ finishReason: "STOP", content: { parts: [{ text: "ok" }] } }],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    const { geminiGenerateText } = await import("../../src/lib/ai/gemini");
+    await geminiGenerateText({
+      apiKey: "k",
+      model: "gemini-2.0-flash",
+      prompt: "x",
+      signal: ac.signal,
+    });
+  });
+
   test("throws a helpful error when the API responds with JSON error message", async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => {
       return new Response(JSON.stringify({ error: { message: "Bad key", code: 401 } }), {
