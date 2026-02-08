@@ -1,71 +1,54 @@
 import Link from "next/link";
-import { listOfficialDocs } from "@/lib/convexPublic";
 
-export default async function Home() {
-  const docs = await listOfficialDocs().catch(() => []);
+const features = [
+  {
+    title: "Markdown by default",
+    description: "All docs are rendered from markdown so content is copy/paste friendly for AI workflows.",
+  },
+  {
+    title: "Lifecycle states",
+    description: "Track docs as Draft, Final, and Official with clear publishing intent.",
+  },
+  {
+    title: "Template-driven writing",
+    description: "Use reusable templates to generate uniform prompts and consistent document shapes.",
+  },
+];
 
+export default function Home() {
   return (
-    <div className="min-h-screen px-6 py-10">
-      <header className="mx-auto max-w-5xl">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Amber Docs</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-700">
-              Markdown-first company docs with draft→final→official workflows and AI prompt packs.
-            </p>
-          </div>
-          <nav className="flex items-center gap-2 text-sm">
-            <Link
-              href="/docs"
-              className="rounded-md border border-black/10 bg-white/60 px-3 py-1.5 font-medium text-zinc-900 shadow-sm backdrop-blur hover:bg-white"
-            >
-              Browse
-            </Link>
-            <Link
-              href="/admin"
-              className="rounded-md border border-black/10 bg-zinc-950 px-3 py-1.5 font-medium text-zinc-50 shadow-sm hover:bg-zinc-900"
-            >
-              Admin
-            </Link>
-          </nav>
+    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-12">
+      <header className="space-y-4">
+        <p className="text-sm font-medium uppercase tracking-wider text-zinc-500">Amber Protocol</p>
+        <h1 className="text-4xl font-semibold tracking-tight">AI-native documentation workspace</h1>
+        <p className="max-w-2xl text-zinc-600">
+          A simple docs hub for drafting, reviewing, and publishing company documentation that is readable
+          by humans and AI systems.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/docs"
+            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+          >
+            Browse docs
+          </Link>
+          <Link
+            href="/templates"
+            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+          >
+            Open template tool
+          </Link>
         </div>
       </header>
 
-      <main className="mx-auto mt-8 max-w-5xl">
-        <section className="rounded-2xl border border-black/10 bg-white/60 p-5 shadow-sm backdrop-blur">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="text-sm font-semibold tracking-wide text-zinc-900">Official Docs</h2>
-            <Link
-              href="/docs"
-              className="text-xs font-medium text-zinc-700 underline decoration-black/20 underline-offset-4 hover:text-zinc-900 hover:decoration-black/40"
-            >
-              See all
-            </Link>
+      <section className="grid gap-4 md:grid-cols-3">
+        {features.map((feature) => (
+          <div key={feature.title} className="rounded-xl border border-zinc-200 p-5">
+            <h2 className="mb-2 text-lg font-semibold">{feature.title}</h2>
+            <p className="text-sm text-zinc-600">{feature.description}</p>
           </div>
-          <ul className="mt-4 divide-y divide-black/5">
-            {docs.length === 0 ? (
-              <li className="py-4 text-sm text-zinc-700">
-                No official docs yet. Create a draft in the admin editor and promote it to official.
-              </li>
-            ) : (
-              docs.map((d) => (
-                <li key={d.slug} className="flex flex-wrap items-center justify-between gap-4 py-4">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/docs/${encodeURIComponent(d.slug)}`}
-                      className="font-medium text-zinc-950 underline decoration-black/20 underline-offset-4 hover:decoration-black/40"
-                    >
-                      {d.title}
-                    </Link>
-                    <div className="mt-1 text-xs text-zinc-600">{d.slug}</div>
-                  </div>
-                  <div className="text-xs text-zinc-600">v{d.revisionNumber ?? "—"}</div>
-                </li>
-              ))
-            )}
-          </ul>
-        </section>
-      </main>
-    </div>
+        ))}
+      </section>
+    </main>
   );
 }

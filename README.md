@@ -1,90 +1,71 @@
-# Amber Docs
+# Amber Protocol Docs
 
-Markdown-first company documentation with:
-- draft → final → official publishing
-- immutable revisions
-- per-doc notes
-- AI prompt packs (copy/paste into Claude, OpenAI, Kimi, etc.)
-- public rendered docs + public raw Markdown endpoints
+Public documentation workspace for Amber Protocol, designed for human readers and AI consumption.
 
-## Stack
+## Product surface
 
-- Next.js (App Router) for UI + public site
-- Convex for storage + versioning/workflows
-- Markdown rendering via `react-markdown` (GFM) + sanitization
+- `/` — Product landing page for the docs workspace
+- `/docs` — Documentation library with lifecycle stage badges (Draft / Final / Official)
+- `/docs/[slug]` — Individual markdown docs with AI checks and related context
+- `/templates` — Reusable template builder that outputs AI prompts + markdown scaffolds
 
-## Routes
 
-- Public docs:
-  - `/docs` (list official)
-  - `/docs/[slug]` (render official)
-  - `/raw/[slug]` (official Markdown, best for AI + copy/paste)
-- Admin/editor:
-  - `/admin`
-  - `/admin/[slug]`
+## Template tool (new)
 
-## Local Dev
+The template tool lets you standardize document structures across teams.
+
+1. Pick a template type (executive brief, launch note, partner announcement).
+2. Fill required metadata fields.
+3. Copy the generated AI prompt to Claude/OpenAI/Kimi.
+4. Copy the markdown scaffold back into your docs workflow.
+
+This keeps doc shapes consistent while still allowing model-assisted drafting.
+
+## Quick start
 
 ```bash
 pnpm install
-pnpm convex dev
-```
-
-This configures Convex and writes `.env.local` (ignored by git) with:
-- `CONVEX_DEPLOYMENT`
-- `NEXT_PUBLIC_CONVEX_URL`
-- `NEXT_PUBLIC_CONVEX_SITE_URL`
-
-### Configure Admin Writes
-
-Writes go through a Convex HTTP action protected by a shared secret:
-
-1. Pick a secret value (any random string).
-2. Set it in Convex:
-
-```bash
-pnpm convex env set DOCS_WRITE_SECRET "your-secret"
-```
-
-3. Set it for Next.js (in `.env.local`):
-
-```bash
-DOCS_WRITE_SECRET=your-secret
-```
-
-### (Optional) Protect `/admin` With Basic Auth
-
-Set these in `.env.local`:
-
-```bash
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-me
-```
-
-### Run Everything
-
-```bash
 pnpm dev
 ```
 
-Then open:
-- http://localhost:3000/admin
+Open http://localhost:3000.
 
-Click **Seed Template** to create the starter “Executive Summary” doc.
+## Deployment (Cloudflare Pages)
 
-## Deploy
+This project is configured as a static Next.js export for easy Cloudflare Pages hosting.
 
-Host the Next.js app on Vercel (or similar) and set env vars:
-- `NEXT_PUBLIC_CONVEX_URL`
-- `NEXT_PUBLIC_CONVEX_SITE_URL`
-- `DOCS_WRITE_SECRET`
-- `ADMIN_USERNAME` / `ADMIN_PASSWORD` (recommended)
+### One-time Cloudflare setup
 
-Also set `DOCS_WRITE_SECRET` in your Convex deployment env for the same environment (dev/prod) via `pnpm convex env set ...` (use `--prod` for production).
+1. Create a Cloudflare Pages project named **`amber-docs`**.
+2. Set your custom domain to **`docs.amberprotocol.org`** in Pages → Custom domains.
+3. Ensure the `amberprotocol.org` DNS zone is in Cloudflare.
 
-## Data Model (Convex)
+### Deploy from local machine
 
-- `docs`: one row per doc (slug/title + pointers to draft/final/official revisions)
-- `revisions`: immutable markdown snapshots per doc
-- `notes`: lightweight annotations per doc (optionally tied to a revision/section)
+```bash
+pnpm deploy:cloudflare
+```
 
+This runs:
+
+- `pnpm build` (produces static `out/`)
+- `wrangler pages deploy out --project-name amber-docs`
+
+### Deploy from GitHub Actions
+
+A workflow is included at `.github/workflows/deploy-cloudflare-pages.yml`.
+
+Add these GitHub repo secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Then pushing to `main` or `work` triggers deployment automatically.
+
+## Convex
+
+Convex schema and functions are in `convex/`. Start local Convex dev server with:
+
+```bash
+npx convex dev
+```

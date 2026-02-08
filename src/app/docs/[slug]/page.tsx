@@ -1,61 +1,68 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Markdown } from "@/components/Markdown";
-import { getOfficialDocBySlug } from "@/lib/convexPublic";
+import { docs, getDocBySlug, stageBadgeClass } from "@/lib/docs";
 
-export default async function DocPage({ params }: { params: { slug: string } }) {
+export function generateStaticParams() {
+  return docs.map((doc) => ({ slug: doc.slug }));
+}
+
+export function generateMetadata({ params }: { params: { slug: string } }) {
   const { slug } = params;
+  const doc = getDocBySlug(slug);
+  if (!doc) {
+    return { title: "Doc Not Found | Amber Protocol" };
+  }
+  return {
+    title: `${doc.title} | Amber Protocol`,
+    description: doc.summary,
+  };
+}
 
-  const doc = await getOfficialDocBySlug(slug);
+export default function DocDetailPage({ params }: { params: { slug: string } }) {
+  const { slug } = params;
+  const doc = getDocBySlug(slug);
   if (!doc) notFound();
 
   return (
-    <div className="min-h-screen px-6 py-10">
-      <header className="mx-auto max-w-5xl">
-        <nav className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Link
-              href="/docs"
-              className="rounded-md border border-black/10 bg-white/60 px-3 py-1.5 font-medium text-zinc-900 shadow-sm backdrop-blur hover:bg-white"
-            >
-              Docs
-            </Link>
-            <Link
-              href="/"
-              className="text-xs font-medium text-zinc-700 underline decoration-black/20 underline-offset-4 hover:text-zinc-900 hover:decoration-black/40"
-            >
-              Home
-            </Link>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Link
-              href={`/raw/${encodeURIComponent(slug)}`}
-              className="rounded-md border border-black/10 bg-white/60 px-3 py-1.5 font-medium text-zinc-900 shadow-sm backdrop-blur hover:bg-white"
-            >
-              Raw Markdown
-            </Link>
-            <Link
-              href="/admin"
-              className="rounded-md border border-black/10 bg-zinc-950 px-3 py-1.5 font-medium text-zinc-50 shadow-sm hover:bg-zinc-900"
-            >
-              Admin
-            </Link>
-          </div>
-        </nav>
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-6 py-12">
+      <Link href="/docs" className="text-sm text-zinc-500 underline">
+        ← Back to all docs
+      </Link>
 
-        <div className="mt-6">
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">{doc.title}</h1>
-          <p className="mt-2 text-sm text-zinc-700">
-            {doc.slug} · v{doc.revisionNumber ?? "—"}
-          </p>
+      <header className="space-y-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-semibold">{doc.title}</h1>
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${stageBadgeClass(doc.stage)}`}>
+            {doc.stage}
+          </span>
         </div>
+        <p className="text-zinc-600">{doc.summary}</p>
+        <p className="text-xs text-zinc-500">Updated: {doc.updatedAt}</p>
       </header>
 
-      <main className="mx-auto mt-8 max-w-5xl">
-        <article className="rounded-2xl border border-black/10 bg-white/60 p-6 shadow-sm backdrop-blur">
-          <Markdown value={doc.markdown} />
-        </article>
-      </main>
-    </div>
+      <section className="grid gap-5 md:grid-cols-2">
+        <div className="rounded-xl border border-zinc-200 p-5">
+          <h2 className="mb-2 text-lg font-semibold">AI checks</h2>
+          <ul className="list-disc space-y-1 pl-5 text-zinc-700">
+            {doc.aiChecks.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="rounded-xl border border-zinc-200 p-5">
+          <h2 className="mb-2 text-lg font-semibold">Related context</h2>
+          <ul className="list-disc space-y-1 pl-5 text-zinc-700">
+            {doc.relatedContext.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <article className="rounded-xl border border-zinc-200 p-6">
+        <Markdown value={doc.markdown} />
+      </article>
+    </main>
   );
 }

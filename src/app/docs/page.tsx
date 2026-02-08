@@ -1,59 +1,51 @@
 import Link from "next/link";
-import { listOfficialDocs } from "@/lib/convexPublic";
+import { docs, stageBadgeClass } from "@/lib/docs";
 
-export default async function DocsIndexPage() {
-  const docs = await listOfficialDocs().catch(() => []);
+export const metadata = {
+  title: "Docs | Amber Protocol",
+  description: "Browse draft, final, and official documentation",
+};
 
+export default function DocsIndexPage() {
   return (
-    <div className="min-h-screen px-6 py-10">
-      <header className="mx-auto max-w-5xl">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">Docs</h1>
-            <p className="mt-2 text-sm text-zinc-700">Official, public documentation.</p>
-          </div>
-          <nav className="flex items-center gap-2 text-sm">
-            <Link
-              href="/"
-              className="rounded-md border border-black/10 bg-white/60 px-3 py-1.5 font-medium text-zinc-900 shadow-sm backdrop-blur hover:bg-white"
-            >
-              Home
-            </Link>
-            <Link
-              href="/admin"
-              className="rounded-md border border-black/10 bg-zinc-950 px-3 py-1.5 font-medium text-zinc-50 shadow-sm hover:bg-zinc-900"
-            >
-              Admin
-            </Link>
-          </nav>
-        </div>
+    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-6 py-12">
+      <header className="space-y-3">
+        <nav className="flex flex-wrap gap-3 text-sm">
+          <Link href="/" className="underline decoration-black/20 underline-offset-4 hover:decoration-black/40">
+            Home
+          </Link>
+          <Link
+            href="/templates"
+            className="underline decoration-black/20 underline-offset-4 hover:decoration-black/40"
+          >
+            Templates
+          </Link>
+        </nav>
+        <h1 className="text-3xl font-semibold">Documentation Library</h1>
+        <p className="text-zinc-600">
+          Browse docs by lifecycle stage and open each page for markdown content, AI checks, and linked
+          context.
+        </p>
       </header>
 
-      <main className="mx-auto mt-8 max-w-5xl">
-        <section className="rounded-2xl border border-black/10 bg-white/60 p-5 shadow-sm backdrop-blur">
-          <ul className="divide-y divide-black/5">
-            {docs.length === 0 ? (
-              <li className="py-4 text-sm text-zinc-700">No official docs published yet.</li>
-            ) : (
-              docs.map((d) => (
-                <li key={d.slug} className="flex flex-wrap items-center justify-between gap-4 py-4">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/docs/${encodeURIComponent(d.slug)}`}
-                      className="font-medium text-zinc-950 underline decoration-black/20 underline-offset-4 hover:decoration-black/40"
-                    >
-                      {d.title}
-                    </Link>
-                    <div className="mt-1 text-xs text-zinc-600">{d.slug}</div>
-                  </div>
-                  <div className="text-xs text-zinc-600">v{d.revisionNumber ?? "—"}</div>
-                </li>
-              ))
-            )}
-          </ul>
-        </section>
-      </main>
-    </div>
+      <div className="grid gap-4">
+        {docs.map((doc) => (
+          <Link
+            key={doc.slug}
+            href={`/docs/${doc.slug}`}
+            className="rounded-xl border border-zinc-200 p-5 transition hover:border-zinc-400"
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold">{doc.title}</h2>
+              <span className={`rounded-full px-3 py-1 text-xs font-medium ${stageBadgeClass(doc.stage)}`}>
+                {doc.stage}
+              </span>
+            </div>
+            <p className="mb-2 text-zinc-700">{doc.summary}</p>
+            <p className="text-xs text-zinc-500">Updated: {doc.updatedAt}</p>
+          </Link>
+        ))}
+      </div>
+    </main>
   );
 }
-
