@@ -277,6 +277,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
                   className="hidden"
                   type="file"
                   accept="application/json"
+                  aria-label="Import custom disclaimers JSON file"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -331,24 +332,33 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
           <details className="mt-6">
             <summary className="cursor-pointer text-base font-semibold text-zinc-900">Advanced: Add a custom disclaimer</summary>
             <div className="mt-3 grid gap-3">
-              <input
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
-                placeholder="Title"
-                value={newSnippetTitle}
-                onChange={(e) => setNewSnippetTitle(e.target.value)}
-              />
-              <textarea
-                className="h-32 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
-                placeholder="Body"
-                value={newSnippetBody}
-                onChange={(e) => setNewSnippetBody(e.target.value)}
-              />
-              <input
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
-                placeholder="Tags (comma separated)"
-                value={newSnippetTags}
-                onChange={(e) => setNewSnippetTags(e.target.value)}
-              />
+              <label className="block">
+                <div className="text-sm font-semibold text-zinc-800">Title</div>
+                <input
+                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  placeholder="Example: Legal disclaimer"
+                  value={newSnippetTitle}
+                  onChange={(e) => setNewSnippetTitle(e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <div className="text-sm font-semibold text-zinc-800">Body</div>
+                <textarea
+                  className="mt-2 h-32 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  placeholder="Write the disclaimer text here."
+                  value={newSnippetBody}
+                  onChange={(e) => setNewSnippetBody(e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <div className="text-sm font-semibold text-zinc-800">Tags (comma separated)</div>
+                <input
+                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  placeholder="Example: legal, public"
+                  value={newSnippetTags}
+                  onChange={(e) => setNewSnippetTags(e.target.value)}
+                />
+              </label>
               <button className="btn btn-primary" type="button" onClick={addSnippet}>
                 Add disclaimer
               </button>
@@ -380,6 +390,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
                   className="hidden"
                   type="file"
                   accept="application/json"
+                  aria-label="Import custom glossary JSON file"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -439,24 +450,33 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
           <details className="mt-6">
             <summary className="cursor-pointer text-base font-semibold text-zinc-900">Advanced: Add a custom glossary entry</summary>
             <div className="mt-3 grid gap-3">
-              <input
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
-                placeholder="Term"
-                value={newGlossaryTerm}
-                onChange={(e) => setNewGlossaryTerm(e.target.value)}
-              />
-              <textarea
-                className="h-32 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
-                placeholder="Definition"
-                value={newGlossaryDefinition}
-                onChange={(e) => setNewGlossaryDefinition(e.target.value)}
-              />
-              <input
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
-                placeholder="Tags (comma separated)"
-                value={newGlossaryTags}
-                onChange={(e) => setNewGlossaryTags(e.target.value)}
-              />
+              <label className="block">
+                <div className="text-sm font-semibold text-zinc-800">Term</div>
+                <input
+                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  placeholder="Example: Official"
+                  value={newGlossaryTerm}
+                  onChange={(e) => setNewGlossaryTerm(e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <div className="text-sm font-semibold text-zinc-800">Definition</div>
+                <textarea
+                  className="mt-2 h-32 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  placeholder="Write the definition here."
+                  value={newGlossaryDefinition}
+                  onChange={(e) => setNewGlossaryDefinition(e.target.value)}
+                />
+              </label>
+              <label className="block">
+                <div className="text-sm font-semibold text-zinc-800">Tags (comma separated)</div>
+                <input
+                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  placeholder="Example: lifecycle, governance"
+                  value={newGlossaryTags}
+                  onChange={(e) => setNewGlossaryTags(e.target.value)}
+                />
+              </label>
               <button className="btn btn-primary" type="button" onClick={addGlossary}>
                 Add entry
               </button>

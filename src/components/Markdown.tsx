@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { createSlugger } from "@/lib/slugger";
 import type { ReactNode } from "react";
@@ -8,6 +9,7 @@ export function Markdown({ value }: { value: string }) {
   const slugger = createSlugger();
   const schema = {
     ...defaultSchema,
+    tagNames: [...(defaultSchema.tagNames ?? []), "details", "summary"],
     attributes: {
       ...(defaultSchema.attributes ?? {}),
       h1: [...((defaultSchema.attributes?.h1 as string[]) ?? []), "id"],
@@ -18,6 +20,8 @@ export function Markdown({ value }: { value: string }) {
       h6: [...((defaultSchema.attributes?.h6 as string[]) ?? []), "id"],
       a: [...((defaultSchema.attributes?.a as string[]) ?? []), "aria-label"],
       img: [...((defaultSchema.attributes?.img as string[]) ?? []), "src", "alt", "title", "width", "height"],
+      details: [...((defaultSchema.attributes?.details as string[]) ?? []), "open"],
+      summary: [...((defaultSchema.attributes?.summary as string[]) ?? [])],
     },
   };
 
@@ -36,7 +40,7 @@ export function Markdown({ value }: { value: string }) {
     <div className="prose prose-zinc prose-lg max-w-none prose-headings:scroll-mt-28 prose-headings:font-display prose-p:leading-relaxed prose-a:font-semibold prose-a:text-zinc-950 prose-a:decoration-black/20 hover:prose-a:decoration-black/40 prose-pre:rounded-2xl prose-pre:border prose-pre:border-black/10 prose-pre:bg-zinc-950 prose-pre:text-zinc-50 prose-code:rounded prose-code:bg-black/5 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.9em] prose-code:text-zinc-900">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeSanitize, schema]]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
         components={{
           h2({ children, ...props }) {
             const text = textFromChildren(children);

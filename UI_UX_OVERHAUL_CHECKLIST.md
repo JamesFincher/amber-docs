@@ -3,22 +3,22 @@
 Goal: make every core feature usable by a non-technical 64-year-old who only knows how to use a web browser.
 
 ## Success Criteria
-- [ ] Any page can be understood in 10 seconds (what it is + what to do next).
-- [ ] Primary actions are obvious and labeled in plain English (no jargon).
+- [x] Any page can be understood in 10 seconds (what it is + what to do next).
+- [x] Primary actions are obvious and labeled in plain English (no jargon).
 - [x] Default typography is comfortable (>= 18px body, generous line-height).
 - [x] All interactive targets are easy to hit (>= 44px height, clear focus ring).
-- [ ] Advanced/technical options exist but are hidden behind "Advanced" sections.
-- [ ] Users can complete these tasks without prior training:
-  - [ ] Find a document using search.
-  - [ ] Filter documents by topic/stage.
-  - [ ] Bookmark a document and find bookmarks again.
-  - [ ] Compare two versions of a document.
-  - [ ] Copy raw Markdown.
-  - [ ] Use a template to generate an AI prompt + Markdown scaffold.
-  - [ ] Generate a draft with Gemini (Google AI) and download Markdown.
-  - [ ] Create a new doc file and publish/unpublish it (browser-only).
-  - [ ] Copy a disclaimer/glossary entry from Blocks.
-  - [ ] Leave feedback and a note (local).
+- [x] Advanced/technical options exist but are hidden behind "Advanced" sections.
+- [x] Users can complete these tasks without prior training:
+  - [x] Find a document using search.
+  - [x] Filter documents by topic/stage.
+  - [x] Bookmark a document and find bookmarks again.
+  - [x] Compare two versions of a document.
+  - [x] Copy raw Markdown.
+  - [x] Use a template to generate an AI prompt + Markdown scaffold.
+  - [x] Generate a draft with Gemini (Google AI) and download Markdown.
+  - [x] Create a new doc file and publish/unpublish it (browser-only).
+  - [x] Copy a disclaimer/glossary entry from Blocks.
+  - [x] Leave feedback and a note (local).
 
 ## Global UI
 - [x] Add a visible "Help" entry in the main navigation.
@@ -28,7 +28,7 @@ Goal: make every core feature usable by a non-technical 64-year-old who only kno
 - [x] Increase base font sizes and reduce tiny text usage (`text-xs`).
 - [x] Improve contrast and remove readability-reducing glass/blur where possible.
 - [x] Standardize button styles and spacing across all pages.
-- [ ] Ensure all forms have real labels (not just placeholders).
+- [x] Ensure all forms have real labels (not just placeholders).
 
 ## Home Page
 - [x] Replace marketing-first hero with task-first "Start here" guidance.
@@ -76,7 +76,7 @@ Goal: make every core feature usable by a non-technical 64-year-old who only kno
 
 ## Help (/help)
 - [x] Add a simple help page with clickable steps (screenshots optional later).
-- [ ] Include short tutorials for each feature and where data is stored (local vs repo).
+- [x] Include short tutorials for each feature and where data is stored (local vs repo).
 
 ## QA / Tests
 - [x] Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.

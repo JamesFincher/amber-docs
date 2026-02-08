@@ -49,6 +49,9 @@ describe("machine endpoints (route handlers)", () => {
       const { GET } = await import("../../src/app/docs.json/route");
       const res = GET();
       expect(res.status).toBe(200);
+      const etag = res.headers.get("etag");
+      expect(typeof etag).toBe("string");
+      expect(typeof res.headers.get("last-modified")).toBe("string");
       const json = (await res.json()) as {
         schemaVersion: number;
         docsCount: number;
@@ -90,10 +93,13 @@ describe("machine endpoints (route handlers)", () => {
       const rawLatest = await import("../../src/app/raw/[slug]/route");
       const paramsLatest = rawLatest.generateStaticParams();
       expect(paramsLatest.some((p) => p.slug === "a")).toBe(true);
-      const req = {} as unknown as import("next/server").NextRequest;
+      const req = new Request("https://docs.example.test/");
       const ok = await rawLatest.GET(req, { params: Promise.resolve({ slug: "a" }) });
       expect(ok.status).toBe(200);
       expect(await ok.text()).toContain("# A");
+      const etagLatest = ok.headers.get("etag");
+      expect(typeof etagLatest).toBe("string");
+      expect(typeof ok.headers.get("last-modified")).toBe("string");
 
       const miss = await rawLatest.GET(req, { params: Promise.resolve({ slug: "nope" }) });
       expect(miss.status).toBe(404);
@@ -104,6 +110,9 @@ describe("machine endpoints (route handlers)", () => {
       const ok2 = await rawPinned.GET(req, { params: Promise.resolve({ slug: "a", version: "1" }) });
       expect(ok2.status).toBe(200);
       expect(await ok2.text()).toContain("## Alpha");
+      const etagPinned = ok2.headers.get("etag");
+      expect(typeof etagPinned).toBe("string");
+      expect(typeof ok2.headers.get("last-modified")).toBe("string");
 
       const miss2 = await rawPinned.GET(req, { params: Promise.resolve({ slug: "a", version: "999" }) });
       expect(miss2.status).toBe(404);

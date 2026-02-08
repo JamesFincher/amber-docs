@@ -13,6 +13,7 @@ function cleanup(dir: string) {
 
 afterEach(() => {
   delete process.env.AMBER_DOCS_CONTENT_DIR;
+  delete process.env.AMBER_DOCS_ACTOR;
   vi.resetModules();
 });
 
@@ -176,6 +177,36 @@ describe("docsWorkflow (file lifecycle)", () => {
       expect(parsed.frontmatter.stage).toBe("official");
       expect(parsed.frontmatter.lastReviewedAt).toBe("2026-01-02");
       expect(Array.isArray(parsed.frontmatter.approvals)).toBe(true);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  test("audit log entries are appended for lifecycle actions when actor is provided", async () => {
+    const dir = mkTmpDir();
+    try {
+      process.env.AMBER_DOCS_CONTENT_DIR = dir;
+      process.env.AMBER_DOCS_ACTOR = "Tester";
+      const wf = await import("../../src/lib/content/docsWorkflow.server");
+
+      const created = wf.createDocFile({
+        slug: "a",
+        title: "A",
+        summary: "s",
+        updatedAt: "2026-01-01",
+      });
+      let parsed = wf.readDocFile(created.filePath);
+      expect(Array.isArray(parsed.frontmatter.audit)).toBe(true);
+      expect((parsed.frontmatter.audit as Array<{ action?: string; actor?: string }>)[0]?.action).toBe("create");
+      expect((parsed.frontmatter.audit as Array<{ action?: string; actor?: string }>)[0]?.actor).toBe("Tester");
+
+      wf.publishDocVersion({ slug: "a", version: created.version });
+      parsed = wf.readDocFile(created.filePath);
+      expect((parsed.frontmatter.audit as Array<{ action?: string }>).some((a) => a.action === "publish")).toBe(true);
+
+      wf.finalizeDocVersion({ slug: "a", version: created.version });
+      parsed = wf.readDocFile(created.filePath);
+      expect((parsed.frontmatter.audit as Array<{ action?: string }>).some((a) => a.action === "set_stage")).toBe(true);
     } finally {
       cleanup(dir);
     }

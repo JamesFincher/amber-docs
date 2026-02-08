@@ -270,8 +270,7 @@ mindmap
 - [x] Expanded test coverage + edge case tests + coverage run
 
 ### Next (good follow-ups)
-- [ ] Add a “Run QA now” button in Studio (runs `pnpm qa` locally, or shows the exact command to run)
-- [ ] Add optional “Create PR” guidance for non-technical users (step-by-step)
-- [ ] Add structured “citation collection” UI for Official docs (labels + URLs)
-- [ ] Add doc-type templates that auto-fill lifecycle metadata (owners/topics/approvals)
-
+- [x] Add a “Run QA now” button in Studio (runs `pnpm qa` locally, or shows the exact command to run)
+- [x] Add optional “Create PR” guidance for non-technical users (step-by-step)
+- [x] Add structured “citation collection” UI for Official docs (labels + URLs)
+- [x] Add doc-type templates that auto-fill lifecycle metadata (owners/topics/approvals)

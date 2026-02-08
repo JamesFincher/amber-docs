@@ -3,7 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
 import { z } from "zod";
-import type { DocRecord, DocStage } from "../docs";
+import type { AuditEntry, DocRecord, DocStage, DocVisibility } from "../docs";
 import { extractToc, toSearchText } from "../markdown";
 
 const CitationSchema = z.object({
@@ -16,12 +16,24 @@ const ApprovalSchema = z.object({
   date: z.string().min(1),
 });
 
+const AuditEntrySchema = z.object({
+  at: z.string().min(1),
+  action: z.string().min(1),
+  actor: z.string().min(1).optional(),
+  note: z.string().min(1).optional(),
+  fromStage: z.enum(["draft", "final", "official"]).optional(),
+  toStage: z.enum(["draft", "final", "official"]).optional(),
+  fromArchived: z.boolean().optional(),
+  toArchived: z.boolean().optional(),
+});
+
 const DocFrontmatterSchema = z.object({
   slug: z.string().min(1),
   version: z.string().min(1).optional(),
   title: z.string().min(1),
   stage: z.enum(["draft", "final", "official"]) satisfies z.ZodType<DocStage>,
   archived: z.boolean().optional(),
+  visibility: z.enum(["public", "internal", "private"]).optional(),
   summary: z.string().min(1),
   updatedAt: z.string().min(1),
   lastReviewedAt: z.string().min(1).optional(),
@@ -32,8 +44,11 @@ const DocFrontmatterSchema = z.object({
   aiChecks: z.array(z.string().min(1)).optional(),
   relatedContext: z.array(z.string().min(1)).optional(),
   relatedSlugs: z.array(z.string().min(1)).optional(),
+  canonicalFor: z.array(z.string().min(1)).optional(),
+  facts: z.record(z.string(), z.string().min(1)).optional(),
   citations: z.array(CitationSchema).optional(),
   approvals: z.array(ApprovalSchema).optional(),
+  audit: z.array(AuditEntrySchema).optional(),
 });
 
 function contentRoot() {
@@ -47,6 +62,23 @@ function docsDir() {
 
 function sha256(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex");
+}
+
+function computeContentHash(input: {
+  slug: string;
+  version: string;
+  title: string;
+  stage: DocStage;
+  archived: boolean;
+  visibility: DocVisibility;
+  summary: string;
+  updatedAt: string;
+  lastReviewedAt: string | null;
+  owners: string[];
+  topics: string[];
+  markdown: string;
+}): string {
+  return sha256(JSON.stringify(input));
 }
 
 function listDocFiles(): string[] {
@@ -75,21 +107,21 @@ function parseDocFile(filePath: string): DocRecord {
   const searchText = toSearchText(markdown);
 
   const version = fm.version ?? fm.updatedAt;
-  const contentHash = sha256(
-    JSON.stringify({
-      slug: fm.slug,
-      version,
-      title: fm.title,
-      stage: fm.stage,
-      archived: fm.archived ?? false,
-      summary: fm.summary,
-      updatedAt: fm.updatedAt,
-      lastReviewedAt: fm.lastReviewedAt ?? null,
-      owners: fm.owners ?? [],
-      topics: fm.topics ?? [],
-      markdown,
-    }),
-  );
+  const visibility: DocVisibility = fm.visibility ?? "public";
+  const contentHash = computeContentHash({
+    slug: fm.slug,
+    version,
+    title: fm.title,
+    stage: fm.stage,
+    archived: fm.archived ?? false,
+    visibility,
+    summary: fm.summary,
+    updatedAt: fm.updatedAt,
+    lastReviewedAt: fm.lastReviewedAt ?? null,
+    owners: fm.owners ?? [],
+    topics: fm.topics ?? [],
+    markdown,
+  });
 
   return {
     slug: fm.slug,
@@ -97,6 +129,7 @@ function parseDocFile(filePath: string): DocRecord {
     title: fm.title,
     stage: fm.stage,
     archived: fm.archived ?? false,
+    visibility,
     summary: fm.summary,
     updatedAt: fm.updatedAt,
     lastReviewedAt: fm.lastReviewedAt,
@@ -107,8 +140,11 @@ function parseDocFile(filePath: string): DocRecord {
     aiChecks: fm.aiChecks ?? [],
     relatedContext: fm.relatedContext ?? [],
     relatedSlugs: fm.relatedSlugs ?? [],
+    canonicalFor: fm.canonicalFor ?? [],
+    facts: fm.facts ?? {},
     citations: fm.citations ?? [],
     approvals: fm.approvals ?? [],
+    audit: (fm.audit ?? []) as AuditEntry[],
     markdown,
     toc,
     headings,
@@ -120,6 +156,8 @@ function parseDocFile(filePath: string): DocRecord {
 
 let _cache: DocRecord[] | null = null;
 let _cacheRoot: string | null = null;
+let _visibleCacheRoot: string | null = null;
+const _visibleCache = new Map<string, DocRecord[]>();
 
 export function loadAllDocs(): DocRecord[] {
   const root = contentRoot();
@@ -141,13 +179,133 @@ export function loadAllDocs(): DocRecord[] {
 export function resetDocsCache() {
   _cache = null;
   _cacheRoot = null;
+  _visibleCacheRoot = null;
+  _visibleCache.clear();
 }
 
-type ListOptions = { includeArchived?: boolean };
+export type DocsAudience = "public" | "internal" | "private";
+
+function docsAudienceFromEnv(): DocsAudience {
+  const raw = (process.env.AMBER_DOCS_AUDIENCE ?? "").trim().toLowerCase();
+  if (raw === "public" || raw === "internal" || raw === "private") return raw;
+  return "private";
+}
+
+function isPublicExportFromEnv(): boolean {
+  const raw = (process.env.AMBER_DOCS_PUBLIC_EXPORT ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
+function visibilityRank(v: DocVisibility): number {
+  switch (v) {
+    case "public":
+      return 0;
+    case "internal":
+      return 1;
+    case "private":
+      return 2;
+  }
+}
+
+function audienceRank(a: DocsAudience): number {
+  switch (a) {
+    case "public":
+      return 0;
+    case "internal":
+      return 1;
+    case "private":
+      return 2;
+  }
+}
+
+function isVisibilityAllowed(v: DocVisibility, audience: DocsAudience): boolean {
+  return visibilityRank(v) <= audienceRank(audience);
+}
+
+function stripAudienceBlock(markdown: string, tag: "internal" | "private"): string {
+  const startRe = new RegExp(`<!--\\s*audience:${tag}:start\\s*-->`, "i");
+  const endRe = new RegExp(`<!--\\s*audience:${tag}:end\\s*-->`, "i");
+  let out = markdown;
+  for (let i = 0; i < 5000; i++) {
+    const start = startRe.exec(out);
+    if (!start) break;
+    const startIdx = start.index;
+    const afterStart = startIdx + start[0].length;
+    const end = endRe.exec(out.slice(afterStart));
+    if (!end) {
+      out = out.slice(0, startIdx).trimEnd() + "\n";
+      break;
+    }
+    const endIdx = afterStart + end.index + end[0].length;
+    out = out.slice(0, startIdx) + "\n\n" + out.slice(endIdx);
+  }
+  return out;
+}
+
+function applyAudienceRedactions(markdown: string, audience: DocsAudience): string {
+  if (audience === "private") return markdown;
+  let out = markdown;
+  // Internal viewers should not see private-only blocks.
+  out = stripAudienceBlock(out, "private");
+  // Public viewers should not see internal blocks (or private-only, already stripped).
+  if (audience === "public") out = stripAudienceBlock(out, "internal");
+  return out;
+}
+
+function applyAudienceToDoc(doc: DocRecord, audience: DocsAudience): DocRecord {
+  const markdown = applyAudienceRedactions(doc.markdown, audience);
+  if (markdown === doc.markdown) return doc;
+  const toc = extractToc(markdown);
+  const headings = toc.map((t) => t.text);
+  const searchText = toSearchText(markdown);
+  const contentHash = computeContentHash({
+    slug: doc.slug,
+    version: doc.version,
+    title: doc.title,
+    stage: doc.stage,
+    archived: doc.archived,
+    visibility: doc.visibility,
+    summary: doc.summary,
+    updatedAt: doc.updatedAt,
+    lastReviewedAt: doc.lastReviewedAt ?? null,
+    owners: doc.owners ?? [],
+    topics: doc.topics ?? [],
+    markdown,
+  });
+  return { ...doc, markdown, toc, headings, searchText, contentHash };
+}
+
+export type ListOptions = { includeArchived?: boolean; includeHidden?: boolean; raw?: boolean };
 
 function visibleDocs(options: ListOptions = {}): DocRecord[] {
-  const all = loadAllDocs();
-  return options.includeArchived ? all : all.filter((d) => !d.archived);
+  const root = contentRoot();
+  if (_visibleCacheRoot !== root) {
+    _visibleCacheRoot = root;
+    _visibleCache.clear();
+  }
+
+  const audience = docsAudienceFromEnv();
+  const publicExport = isPublicExportFromEnv();
+  const key = [
+    options.includeArchived ? "a1" : "a0",
+    options.includeHidden ? "h1" : "h0",
+    options.raw ? "r1" : "r0",
+    `aud:${audience}`,
+    publicExport ? "pub1" : "pub0",
+  ].join("|");
+  const cached = _visibleCache.get(key);
+  if (cached) return cached;
+
+  let docs = loadAllDocs();
+  if (!options.includeArchived) docs = docs.filter((d) => !d.archived);
+  if (!options.includeHidden) {
+    docs = docs.filter((d) => isVisibilityAllowed(d.visibility, audience));
+    if (publicExport) docs = docs.filter((d) => d.stage === "official");
+  }
+  if (!options.raw) docs = docs.map((d) => applyAudienceToDoc(d, audience));
+
+  _visibleCache.set(key, docs);
+  return docs;
 }
 
 export function listDocSlugs(options: ListOptions = {}): string[] {
@@ -169,10 +327,15 @@ export function getLatestDoc(slug: string, options: ListOptions = {}): DocRecord
 }
 
 export function listLatestDocs(options: ListOptions = {}): DocRecord[] {
-  return listDocSlugs(options)
-    .map((slug) => getLatestDoc(slug, options))
-    .filter((d): d is DocRecord => !!d)
-    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : a.slug.localeCompare(b.slug)));
+  const docs = visibleDocs(options);
+  const seen = new Set<string>();
+  const latest: DocRecord[] = [];
+  for (const d of docs) {
+    if (seen.has(d.slug)) continue;
+    seen.add(d.slug);
+    latest.push(d);
+  }
+  return latest.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : a.slug.localeCompare(b.slug)));
 }
 
 export type Collection = {

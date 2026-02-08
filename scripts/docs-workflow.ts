@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
-import type { Approval } from "../src/lib/docs";
+import type { Approval, AuditEntry, DocVisibility } from "../src/lib/docs";
 import {
   cloneLatestToNewVersion,
   createDocFile,
@@ -86,6 +86,13 @@ function parseApprovals(v: string | null): Approval[] {
   return out;
 }
 
+function parseVisibility(v: string | null): DocVisibility | null {
+  if (!v) return null;
+  const raw = v.trim().toLowerCase();
+  if (raw === "public" || raw === "internal" || raw === "private") return raw;
+  return null;
+}
+
 function usage(): string {
   return `Amber Docs workflow
 
@@ -106,15 +113,17 @@ Commands:
 
 Common flags:
   --slug <slug> --version <version>
+  --actor <name> (adds an audit log entry in doc frontmatter)
 
 new flags:
-  --title <title> --summary <summary> [--updated-at YYYY-MM-DD] [--stage draft|final|official] [--publish]
+  --title <title> --summary <summary> [--updated-at YYYY-MM-DD] [--stage draft|final|official] [--publish] [--visibility public|internal|private]
 
 clone flags:
-  [--new-version <version>] [--new-updated-at YYYY-MM-DD] [--from-archived] [--publish]
+  [--new-version <version>] [--new-updated-at YYYY-MM-DD] [--from-archived] [--publish] [--visibility public|internal|private]
 
 update flags:
   [--title ...] [--summary ...] [--owners a,b] [--topics a,b] [--collection ...] [--order 1]
+  [--visibility public|internal|private]
   [--stage draft|final|official] [--archived true|false] [--published true|false]
   [--markdown-file /path/to/file.md]
 
@@ -127,6 +136,14 @@ export async function main(argv = process.argv.slice(2)) {
   const parsed = parseArgv(argv);
   const cmd = parsed.command;
   const flags = parsed.flags;
+  const actor = asString(flags.actor);
+  const auditEntry = actor
+    ? ({
+        at: new Date().toISOString(),
+        action: `cli:${cmd}`,
+        actor,
+      } satisfies AuditEntry)
+    : null;
 
   if (!cmd || flags.help === true || flags.h === true) {
     console.log(usage());
@@ -143,6 +160,7 @@ export async function main(argv = process.argv.slice(2)) {
       const stageRaw = asString(flags.stage);
       const stage = stageRaw ? parseStage(stageRaw) : undefined;
       const published = flags.publish === true ? true : undefined;
+      const visibility = parseVisibility(asString(flags.visibility)) ?? undefined;
 
       const updatedAt = asString(flags["updated-at"]);
       const version = asString(flags.version);
@@ -159,10 +177,12 @@ export async function main(argv = process.argv.slice(2)) {
         updatedAt: updatedAt ?? undefined,
         version: version ?? undefined,
         published,
+        visibility,
         owners,
         topics,
         collection,
         order: Number.isFinite(order as number) ? order : undefined,
+        actor: actor ?? undefined,
       });
 
       console.log(`Created: ${r.filePath} (v${r.version})`);
@@ -177,6 +197,7 @@ export async function main(argv = process.argv.slice(2)) {
 
       const stageRaw = asString(flags.stage);
       const stage = stageRaw ? parseStage(stageRaw) : undefined;
+      const visibility = parseVisibility(asString(flags.visibility)) ?? undefined;
 
       const r = cloneLatestToNewVersion({
         slug,
@@ -185,6 +206,8 @@ export async function main(argv = process.argv.slice(2)) {
         stage,
         fromArchived,
         published,
+        visibility,
+        actor: actor ?? undefined,
       });
       console.log(`Cloned: ${r.filePath} (v${r.version}) from v${r.from.version}`);
       return;
@@ -220,6 +243,13 @@ export async function main(argv = process.argv.slice(2)) {
       const stageRaw = asString(flags.stage);
       if (stageRaw) patchFrontmatter.stage = parseStage(stageRaw);
 
+      const visibilityRaw = asString(flags.visibility);
+      if (visibilityRaw !== null) {
+        const v = parseVisibility(visibilityRaw);
+        if (!v) throw new Error("--visibility must be public|internal|private");
+        patchFrontmatter.visibility = v;
+      }
+
       const archivedRaw = flags.archived === true ? "true" : asString(flags.archived);
       const publishedRaw = flags.published === true ? "true" : asString(flags.published);
       if (archivedRaw !== null && publishedRaw !== null) throw new Error("Pass only one of: --archived, --published");
@@ -248,6 +278,7 @@ export async function main(argv = process.argv.slice(2)) {
         version,
         patchFrontmatter: Object.keys(patchFrontmatter).length ? patchFrontmatter : undefined,
         patchMarkdown,
+        auditEntry: auditEntry ?? undefined,
       });
       console.log(`Updated: ${r.filePath}`);
       return;
@@ -257,7 +288,7 @@ export async function main(argv = process.argv.slice(2)) {
       const slug = asString(flags.slug);
       const version = asString(flags.version);
       if (!slug || !version) throw new Error("publish requires --slug and --version");
-      const r = publishDocVersion({ slug, version });
+      const r = publishDocVersion({ slug, version, actor: actor ?? undefined });
       console.log(`Published: ${r.filePath}`);
       return;
     }
@@ -266,7 +297,7 @@ export async function main(argv = process.argv.slice(2)) {
       const slug = asString(flags.slug);
       const version = asString(flags.version);
       if (!slug || !version) throw new Error(`${cmd} requires --slug and --version`);
-      const r = unpublishDocVersion({ slug, version });
+      const r = unpublishDocVersion({ slug, version, actor: actor ?? undefined });
       console.log(`Unpublished: ${r.filePath}`);
       return;
     }
@@ -275,7 +306,7 @@ export async function main(argv = process.argv.slice(2)) {
       const slug = asString(flags.slug);
       const version = asString(flags.version);
       if (!slug || !version) throw new Error("finalize requires --slug and --version");
-      const r = finalizeDocVersion({ slug, version });
+      const r = finalizeDocVersion({ slug, version, actor: actor ?? undefined });
       console.log(`Finalized: ${r.filePath}`);
       return;
     }
@@ -289,6 +320,7 @@ export async function main(argv = process.argv.slice(2)) {
         version,
         reviewedAt: asString(flags["reviewed-at"]) ?? undefined,
         approvals: parseApprovals(asString(flags.approvals)),
+        actor: actor ?? undefined,
       });
       console.log(`Promoted to Official: ${r.filePath}`);
       return;

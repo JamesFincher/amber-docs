@@ -22,6 +22,7 @@ describe("scripts (import-safe wrappers)", () => {
   const prevUrl = process.env.DOCS_WEBHOOK_URL;
   const prevSecret = process.env.DOCS_WEBHOOK_SECRET;
   const prevEvent = process.env.DOCS_WEBHOOK_EVENT;
+  const prevOutDir = process.env.OUT_DIR;
   const prevExitCode = process.exitCode;
 
   afterEach(() => {
@@ -33,6 +34,8 @@ describe("scripts (import-safe wrappers)", () => {
     else process.env.DOCS_WEBHOOK_SECRET = prevSecret;
     if (prevEvent === undefined) delete process.env.DOCS_WEBHOOK_EVENT;
     else process.env.DOCS_WEBHOOK_EVENT = prevEvent;
+    if (prevOutDir === undefined) delete process.env.OUT_DIR;
+    else process.env.OUT_DIR = prevOutDir;
 
     process.exitCode = prevExitCode;
     vi.unstubAllGlobals();
@@ -304,6 +307,62 @@ describe("scripts (import-safe wrappers)", () => {
       process.exitCode = undefined;
       await main(["update", "--slug", "a", "--version", "2026-01-01", "--archived", "wat"]);
       expect(process.exitCode).toBe(1);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("scripts/perf-budget sets exitCode=1 when out dir is missing", async () => {
+    const root = mkTmpDir();
+    try {
+      process.exitCode = undefined;
+      process.env.OUT_DIR = path.join(root, "missing-out");
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      const { main } = await import("../scripts/perf-budget");
+      await main();
+
+      expect(process.exitCode).toBe(1);
+      expect(err).toHaveBeenCalled();
+      expect(log).not.toHaveBeenCalled();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("scripts/perf-budget passes on small exports and fails on an oversized file", async () => {
+    const root = mkTmpDir();
+    try {
+      const outDir = path.join(root, "out");
+      fs.mkdirSync(outDir, { recursive: true });
+      process.env.OUT_DIR = outDir;
+
+      const small = JSON.stringify({ ok: true }) + "\n";
+      write(path.join(outDir, "docs.json"), small);
+      write(path.join(outDir, "search-index.json"), "[]\n");
+      write(path.join(outDir, "chunks.json"), "[]\n");
+      write(path.join(outDir, "embeddings-manifest.json"), "[]\n");
+      write(path.join(outDir, "claims.json"), "[]\n");
+      write(path.join(outDir, "updates.json"), "[]\n");
+      write(path.join(outDir, "synonyms.json"), "{}\n");
+
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      const { main } = await import("../scripts/perf-budget");
+      process.exitCode = undefined;
+      await main();
+      expect(process.exitCode).toBeUndefined();
+      expect(err).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalled();
+
+      // updates.json has a 256KB budget: exceed it.
+      write(path.join(outDir, "updates.json"), "x".repeat(300 * 1024));
+      process.exitCode = undefined;
+      await main();
+      expect(process.exitCode).toBe(1);
+      expect(err).toHaveBeenCalled();
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

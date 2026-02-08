@@ -6,6 +6,7 @@ import type { DocTemplate } from "@/lib/templates";
 import { buildMarkdownSkeleton, buildPrompt, buildSectionPromptPack } from "@/lib/templates";
 import { CopyButton } from "@/components/CopyButton";
 import { geminiGenerateText } from "@/lib/ai/gemini";
+import { saveStudioImport } from "@/lib/studioImport";
 
 const CUSTOM_KEY = "amber-docs:templates:custom:v1";
 const GEMINI_KEY = "amber-docs:ai:gemini:key:v1";
@@ -65,6 +66,10 @@ function readCustomTemplates(): DocTemplate[] {
 
 function writeCustomTemplates(templates: DocTemplate[]) {
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(templates, null, 2));
+}
+
+function slugifyTitle(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "new-doc";
 }
 
 export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
@@ -390,12 +395,15 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
                 Clear custom
               </button>
             </div>
-            <textarea
-              className="mt-3 h-56 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-sm text-zinc-50"
-              value={customJson}
-              onChange={(e) => setCustomJson(e.target.value)}
-              spellCheck={false}
-            />
+            <label className="mt-3 block">
+              <div className="text-sm font-semibold text-zinc-800">Custom template JSON</div>
+              <textarea
+                className="mt-2 h-56 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-sm text-zinc-50"
+                value={customJson}
+                onChange={(e) => setCustomJson(e.target.value)}
+                spellCheck={false}
+              />
+            </label>
           </details>
         </div>
       </section>
@@ -417,7 +425,37 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
         <div className="card p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-display text-2xl font-semibold">Copy: Markdown scaffold</h2>
-            <CopyButton text={markdownOutput} label="Copy scaffold" />
+            <div className="flex flex-wrap items-center gap-2">
+              <CopyButton text={markdownOutput} label="Copy scaffold" />
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={!markdownOutput.trim()}
+                onClick={() => {
+                  const ok = saveStudioImport({
+                    v: 1,
+                    source: "templates",
+                    createdAt: new Date().toISOString(),
+                    markdown: markdownOutput,
+                    suggested: {
+                      title: topic,
+                      slug: slugifyTitle(topic),
+                      summary: selectedTemplate ? `Draft created from template: ${selectedTemplate.name}` : "Draft created from template",
+                      stage: "draft",
+                      visibility: "internal",
+                      topics: selectedTemplate?.tags ?? [],
+                    },
+                  });
+                  if (!ok) {
+                    alert("Could not save the draft for Studio (local storage blocked). Copy the scaffold instead.");
+                    return;
+                  }
+                  window.location.href = "/studio#import";
+                }}
+              >
+                Send to Write + publish
+              </button>
+            </div>
           </div>
           <textarea
             className="h-72 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
@@ -484,6 +522,34 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
             <div className="font-display text-2xl font-semibold">Generated Markdown</div>
             <div className="flex flex-wrap items-center gap-2">
               <CopyButton text={generated} label="Copy generated" />
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={!generated.trim()}
+                onClick={() => {
+                  const ok = saveStudioImport({
+                    v: 1,
+                    source: "templates",
+                    createdAt: new Date().toISOString(),
+                    markdown: generated,
+                    suggested: {
+                      title: topic,
+                      slug: slugifyTitle(topic),
+                      summary: selectedTemplate ? `Draft created from template: ${selectedTemplate.name}` : "Draft created from template",
+                      stage: "draft",
+                      visibility: "internal",
+                      topics: selectedTemplate?.tags ?? [],
+                    },
+                  });
+                  if (!ok) {
+                    alert("Could not save the draft for Studio (local storage blocked). Copy the generated Markdown instead.");
+                    return;
+                  }
+                  window.location.href = "/studio#import";
+                }}
+              >
+                Send to Write + publish
+              </button>
               <button
                 className="btn btn-secondary"
                 type="button"

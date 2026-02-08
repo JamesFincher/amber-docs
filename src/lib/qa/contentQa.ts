@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { loadAllDocs } from "../content/docs.server";
+import { listDocSlugs, listDocVersions, loadAllDocs } from "../content/docs.server";
 import { loadGlossary } from "../content/blocks.server";
 
 export type Failure = {
@@ -183,20 +183,25 @@ export async function runContentQa(options: ContentQaOptions = {}): Promise<Cont
   const prevContentDir = process.env.AMBER_DOCS_CONTENT_DIR;
   if (options.contentDir) process.env.AMBER_DOCS_CONTENT_DIR = options.contentDir;
   try {
-    const docs = loadAllDocs();
-    const visible = docs.filter((d) => !d.archived);
+    const allDocs = loadAllDocs();
+    const slugs = listDocSlugs();
+    const docs = slugs.flatMap((slug) => listDocVersions(slug));
+    const allSlugs = new Set(allDocs.map((d) => d.slug));
     const glossary = loadGlossary();
     const publicFiles = listPublicFiles(projectRoot);
 
     const slugVersion = new Set<string>();
-    const bySlug = new Map<string, typeof visible>();
+    const bySlug = new Map<string, typeof docs>();
+    const canonicalByTopic = new Map<string, (typeof docs)[number]>();
 
-    for (const d of docs) {
+    for (const d of allDocs) {
       const key = `${d.slug}@${d.version}`;
       if (slugVersion.has(key)) fail("duplicate_doc_version", `Duplicate doc version: ${key}`, failures);
       slugVersion.add(key);
+    }
 
-      if (d.archived) continue;
+    for (const d of docs) {
+      const key = `${d.slug}@${d.version}`;
 
       const arr = bySlug.get(d.slug) ?? [];
       arr.push(d);
@@ -209,6 +214,25 @@ export async function runContentQa(options: ContentQaOptions = {}): Promise<Cont
         fail("bad_lastReviewedAt", `Bad lastReviewedAt for ${key}: ${d.lastReviewedAt}`, failures);
 
       if (!containsH2(d.markdown)) fail("missing_h2", `Doc ${key} should have at least one H2 (## ...)`, failures);
+
+      // Canonical docs (optional): used for contradiction scans vs canonical facts.
+      if (d.canonicalFor?.length) {
+        if (d.stage !== "official") {
+          fail("canonical_not_official", `Canonical doc ${key} must be Official`, failures);
+        }
+        for (const topic of d.canonicalFor) {
+          const prev = canonicalByTopic.get(topic);
+          if (prev) {
+            fail(
+              "duplicate_canonical",
+              `Duplicate canonical doc for topic "${topic}": ${prev.slug}@${prev.version} and ${key}`,
+              failures,
+            );
+            continue;
+          }
+          canonicalByTopic.set(topic, d);
+        }
+      }
 
       if (d.stage === "official") {
         if (!d.owners.length) fail("official_missing_owners", `Official doc ${key} missing owners`, failures);
@@ -227,11 +251,29 @@ export async function runContentQa(options: ContentQaOptions = {}): Promise<Cont
         if ((hasNumbers || hasDates) && !d.citations.length) {
           fail("official_claims_no_citations", `Official doc ${key} has numeric/date claims but no citations`, failures);
         }
+
+        // Contradiction scan (optional): compare `facts` to canonical doc facts when topics match.
+        for (const topic of d.topics) {
+          const canonical = canonicalByTopic.get(topic);
+          if (!canonical) continue;
+          if (canonical.slug === d.slug && canonical.version === d.version) continue;
+          for (const [factKey, factValue] of Object.entries(d.facts ?? {})) {
+            const canonValue = (canonical.facts ?? {})[factKey];
+            if (!canonValue) continue;
+            if (canonValue !== factValue) {
+              fail(
+                "fact_contradiction",
+                `Official doc ${key} fact "${factKey}"="${factValue}" contradicts canonical ${canonical.slug}@${canonical.version} ("${canonValue}") for topic "${topic}"`,
+                failures,
+              );
+            }
+          }
+        }
       }
 
       // Related slugs should exist (latest alias is fine).
       for (const s of d.relatedSlugs ?? []) {
-        if (!bySlug.has(s) && !visible.some((x) => x.slug === s)) {
+        if (!allSlugs.has(s)) {
           fail("bad_related_slug", `Doc ${key} has relatedSlugs entry that does not exist: "${s}"`, failures);
         }
       }
@@ -239,7 +281,7 @@ export async function runContentQa(options: ContentQaOptions = {}): Promise<Cont
       // Internal links should resolve (support versioned and unversioned).
       for (const link of findInternalLinks(d.markdown)) {
         if (link.version) {
-          const exists = visible.some((x) => x.slug === link.slug && x.version === link.version);
+          const exists = docs.some((x) => x.slug === link.slug && x.version === link.version);
           if (!exists) {
             const target =
               link.kind === "raw"
@@ -248,7 +290,7 @@ export async function runContentQa(options: ContentQaOptions = {}): Promise<Cont
             fail("broken_internal_link", `Doc ${key} links to missing ${target}: ${link.raw}`, failures);
           }
         } else {
-          const exists = visible.some((x) => x.slug === link.slug);
+          const exists = docs.some((x) => x.slug === link.slug);
           if (!exists) {
             fail("broken_internal_link", `Doc ${key} links to missing /${link.kind}/${link.slug}: ${link.raw}`, failures);
           }
@@ -290,10 +332,10 @@ export async function runContentQa(options: ContentQaOptions = {}): Promise<Cont
     }
 
     // External links (global, deduped).
-    const external = visible.flatMap((d) => findExternalLinks(d.markdown));
+    const external = docs.flatMap((d) => findExternalLinks(d.markdown));
     await validateExternalLinks({ urls: external, failures, fetchImpl, skipExternalLinks });
 
-    return { ok: failures.length === 0, failures, docsCount: visible.length };
+    return { ok: failures.length === 0, failures, docsCount: docs.length };
   } finally {
     if (options.contentDir) {
       if (prevContentDir === undefined) delete process.env.AMBER_DOCS_CONTENT_DIR;

@@ -75,7 +75,7 @@ export default function HelpPage() {
           <h2 className="font-display text-2xl font-semibold">4) Write + publish a document</h2>
           <p className="mt-3 text-zinc-800">
             Use <span className="font-semibold">Write + publish</span> to create a new doc file and then publish it when it is ready.
-            You can also use Templates to copy an AI prompt and a Markdown scaffold.
+            You can also use Templates or Ask AI, then click <span className="font-semibold">Send to Write + publish</span> to bring a draft here without copy/paste.
           </p>
           <div className="mt-4">
             <Link className="btn btn-primary" href="/studio">
@@ -85,7 +85,24 @@ export default function HelpPage() {
         </div>
 
         <div className="card p-6">
-          <h2 className="font-display text-2xl font-semibold">5) Copy reusable text</h2>
+          <h2 className="font-display text-2xl font-semibold">5) Use Templates</h2>
+          <p className="mt-3 text-zinc-800">
+            Templates help you write consistent docs. Pick a template, fill a few fields, then copy the prompt or scaffold.
+            Optional: generate a first draft with <span className="font-semibold">Google AI (Gemini)</span> and download Markdown.
+            Tip: you can also click <span className="font-semibold">Send to Write + publish</span> to import the draft directly into Studio.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link className="btn btn-primary" href="/templates">
+              Open Templates
+            </Link>
+            <Link className="btn btn-secondary" href="/assistant">
+              Open Ask AI
+            </Link>
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <h2 className="font-display text-2xl font-semibold">6) Copy reusable text</h2>
           <p className="mt-3 text-zinc-800">
             Use <span className="font-semibold">Reusable text</span> to copy disclaimers and glossary definitions into a document.
           </p>
@@ -97,7 +114,7 @@ export default function HelpPage() {
         </div>
 
         <div className="card p-6">
-          <h2 className="font-display text-2xl font-semibold">6) Notes and feedback</h2>
+          <h2 className="font-display text-2xl font-semibold">7) Notes and feedback</h2>
           <p className="mt-3 text-zinc-800">
             Each document has <span className="font-semibold">Notes</span> (your personal notes) and <span className="font-semibold">Feedback</span>.
             Notes and votes are saved locally in your browser.
@@ -108,9 +125,18 @@ export default function HelpPage() {
       <section className="mt-8 card p-6">
         <h2 className="font-display text-2xl font-semibold">Where is my data stored?</h2>
         <p className="mt-3 text-zinc-800">
-          Bookmarks, saved searches, notes, and feedback votes are stored in your web browser on this computer.
-          They are not shared automatically with other people or devices.
+          Some things are stored on this computer (in your browser), and some are stored in the repo (as files).
         </p>
+        <div className="mt-4 grid gap-3 text-zinc-800">
+          <div>
+            <span className="font-semibold">Stored in your browser (this computer):</span> bookmarks, saved searches, notes,
+            feedback votes, custom blocks, custom templates, and any Gemini API key you paste into Templates/Ask AI.
+          </div>
+          <div>
+            <span className="font-semibold">Stored as files in the repo:</span> documents live in <code>content/docs</code>,
+            templates in <code>content/templates</code>, blocks in <code>content/blocks</code>.
+          </div>
+        </div>
       </section>
 
       <section className="mt-8 card p-6">
@@ -122,6 +148,35 @@ export default function HelpPage() {
           <Link className="btn btn-secondary" href="/paths">
             Browse reading lists
           </Link>
+        </div>
+      </section>
+
+      <section className="mt-8 card p-6">
+        <h2 className="font-display text-2xl font-semibold">Publish, visibility, and Official docs</h2>
+        <div className="mt-3 grid gap-3 text-zinc-800">
+          <div>
+            <span className="font-semibold">Publish/unpublish:</span> if a doc is unpublished, it is hidden from the Documents list and exports.
+            Studio shows this as “Published? Yes/No”.
+          </div>
+          <div>
+            <span className="font-semibold">Visibility:</span> docs can be <span className="font-semibold">Public</span>,{" "}
+            <span className="font-semibold">Internal</span>, or <span className="font-semibold">Private</span>. Public docs can appear in the public export.
+          </div>
+          <div>
+            <span className="font-semibold">Official:</span> Official docs should include citations and approvals. Studio has a “Citations + approvals” editor under Advanced.
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-8 card p-6">
+        <h2 className="font-display text-2xl font-semibold">Checks and sharing</h2>
+        <div className="mt-3 grid gap-3 text-zinc-800">
+          <div>
+            <span className="font-semibold">Run checks:</span> in Studio, go to Step 4 and copy the check commands (<code>pnpm qa</code>, <code>pnpm test</code>, <code>pnpm build</code>).
+          </div>
+          <div>
+            <span className="font-semibold">Share with your team:</span> Studio includes a step-by-step “Create a PR” guide under Advanced.
+          </div>
         </div>
       </section>
     </main>

@@ -344,9 +344,14 @@ export function DocsLibraryClient({
             <button className="btn btn-secondary" type="button" onClick={saveCurrentSearch}>
               Save this search
             </button>
-            <Link href="/docs.json" className="btn btn-secondary">
-              Download docs.json
-            </Link>
+            <details>
+              <summary className="btn btn-secondary cursor-pointer">Advanced</summary>
+              <div className="mt-2 grid gap-2">
+                <Link href="/docs.json" className="btn btn-secondary">
+                  Download docs.json
+                </Link>
+              </div>
+            </details>
           </div>
         </div>
 

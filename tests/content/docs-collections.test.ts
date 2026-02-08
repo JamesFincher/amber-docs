@@ -37,14 +37,32 @@ describe("collections helpers", () => {
         path.join(dir, "docs", "c.md"),
         `---\nslug: c\nversion: \"1\"\ntitle: C\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-03\"\n---\n\n# C\n\n## H2\nx\n`,
       );
+      // Two docs with no explicit order should fall back to title sorting.
+      write(
+        path.join(dir, "docs", "d.md"),
+        `---\nslug: d\nversion: \"1\"\ntitle: D\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-04\"\ncollection: \"Path\"\n---\n\n# D\n\n## H2\nx\n`,
+      );
+      write(
+        path.join(dir, "docs", "e.md"),
+        `---\nslug: e\nversion: \"1\"\ntitle: E\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-05\"\ncollection: \"Path\"\n---\n\n# E\n\n## H2\nx\n`,
+      );
+      // Additional collections exercise collection name sorting.
+      write(
+        path.join(dir, "docs", "f.md"),
+        `---\nslug: f\nversion: \"1\"\ntitle: F\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-06\"\ncollection: \"Alpha\"\n---\n\n# F\n\n## H2\nx\n`,
+      );
+      write(
+        path.join(dir, "docs", "g.md"),
+        `---\nslug: g\nversion: \"1\"\ntitle: G\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-07\"\ncollection: \"Beta\"\n---\n\n# G\n\n## H2\nx\n`,
+      );
 
       const mod = await import("../../src/lib/content/docs.server");
       const cols = mod.listCollections();
-      expect(cols.map((c) => c.name)).toEqual(["Path", "Uncategorized"]);
+      expect(cols.map((c) => c.name)).toEqual(["Alpha", "Beta", "Path", "Uncategorized"]);
 
-      const pathCol = cols[0];
+      const pathCol = cols.find((c) => c.name === "Path");
       if (!pathCol) throw new Error("missing Path collection");
-      expect(pathCol.docs.map((d) => d.slug)).toEqual(["b", "a"]);
+      expect(pathCol.docs.map((d) => d.slug)).toEqual(["b", "a", "d", "e"]);
     } finally {
       cleanup(dir);
     }
@@ -85,4 +103,3 @@ describe("collections helpers", () => {
     }
   });
 });
-

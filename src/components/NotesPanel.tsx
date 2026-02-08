@@ -116,12 +116,15 @@ export function NotesPanel(props: { doc: { slug: string; version: string; toc: T
             ))}
           </select>
         </label>
-        <textarea
-          className="h-28 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
-          placeholder="Add a note (what to verify, what changed, open questions)."
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
+        <label className="block">
+          <div className="text-sm font-semibold text-zinc-800">Note</div>
+          <textarea
+            className="mt-2 h-28 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+            placeholder="Add a note (what to verify, what changed, open questions)."
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+          />
+        </label>
         <div className="flex items-center justify-between gap-3">
           <button className="btn btn-primary" onClick={add} type="button">
             Add note

@@ -271,6 +271,96 @@ describe("content QA (edge cases)", () => {
     }
   });
 
+  test("canonical facts contradiction scan flags mismatched facts for shared topics (optional)", async () => {
+    const root = mkTmpDir();
+    try {
+      const contentDir = path.join(root, "content");
+      baseBlocks(contentDir);
+      fs.mkdirSync(path.join(root, "public"), { recursive: true });
+
+      write(
+        path.join(contentDir, "docs", "canonical.md"),
+        `---\nslug: canonical\nversion: \"1\"\ntitle: Canonical\nstage: official\nsummary: s\nupdatedAt: \"2026-01-01\"\nlastReviewedAt: \"2026-01-02\"\nowners: [\"o\"]\ntopics: [\"t\"]\ncanonicalFor: [\"t\"]\nfacts:\n  rate: \"5%\"\ncitations:\n  - label: \"Source\"\napprovals:\n  - name: \"o\"\n    date: \"2026-01-02\"\n---\n\n# Canonical\n\n## H2\nok\n`,
+      );
+
+      write(
+        path.join(contentDir, "docs", "other.md"),
+        `---\nslug: other\nversion: \"1\"\ntitle: Other\nstage: official\nsummary: s\nupdatedAt: \"2026-01-03\"\nlastReviewedAt: \"2026-01-03\"\nowners: [\"o\"]\ntopics: [\"t\"]\nfacts:\n  rate: \"7%\"\ncitations:\n  - label: \"Source\"\napprovals:\n  - name: \"o\"\n    date: \"2026-01-03\"\n---\n\n# Other\n\n## H2\nok\n`,
+      );
+
+      const r = await runQa(root, contentDir);
+      expect(r.ok).toBe(false);
+      expect(r.failures.map((f) => f.code)).toContain("fact_contradiction");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("fails when Official doc is missing lastReviewedAt (date is required)", async () => {
+    const root = mkTmpDir();
+    try {
+      const contentDir = path.join(root, "content");
+      baseBlocks(contentDir);
+      fs.mkdirSync(path.join(root, "public"), { recursive: true });
+
+      write(
+        path.join(contentDir, "docs", "a.md"),
+        `---\nslug: a\nversion: \"1\"\ntitle: A\nstage: official\nsummary: s\nupdatedAt: \"2026-01-01\"\nowners: [\"o\"]\ntopics: [\"t\"]\nvisibility: public\ncitations:\n  - label: \"Source\"\napprovals:\n  - name: \"o\"\n    date: \"2026-01-02\"\n---\n\n# A\n\n## H2\nok\n`,
+      );
+
+      const r = await runQa(root, contentDir);
+      expect(r.ok).toBe(false);
+      expect(r.failures.map((f) => f.code)).toContain("official_missing_lastReviewedAt");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("official_claims_no_citations flags numeric/date claims when citations are missing", async () => {
+    const root = mkTmpDir();
+    try {
+      const contentDir = path.join(root, "content");
+      baseBlocks(contentDir);
+      fs.mkdirSync(path.join(root, "public"), { recursive: true });
+
+      write(
+        path.join(contentDir, "docs", "a.md"),
+        `---\nslug: a\nversion: \"1\"\ntitle: A\nstage: official\nsummary: s\nupdatedAt: \"2026-01-01\"\nlastReviewedAt: \"2026-01-02\"\nowners: [\"o\"]\ntopics: [\"t\"]\napprovals:\n  - name: \"o\"\n    date: \"2026-01-02\"\n---\n\n# A\n\n## H2\nContains 123 and 2026-01-01.\n`,
+      );
+
+      const r = await runQa(root, contentDir);
+      expect(r.ok).toBe(false);
+      expect(r.failures.map((f) => f.code)).toContain("official_missing_citations");
+      expect(r.failures.map((f) => f.code)).toContain("official_claims_no_citations");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("fails on duplicate canonical docs for the same topic", async () => {
+    const root = mkTmpDir();
+    try {
+      const contentDir = path.join(root, "content");
+      baseBlocks(contentDir);
+      fs.mkdirSync(path.join(root, "public"), { recursive: true });
+
+      write(
+        path.join(contentDir, "docs", "a.md"),
+        `---\nslug: a\nversion: \"1\"\ntitle: A\nstage: official\nsummary: s\nupdatedAt: \"2026-01-01\"\nlastReviewedAt: \"2026-01-02\"\nowners: [\"o\"]\ntopics: [\"t\"]\ncanonicalFor: [\"t\"]\ncitations:\n  - label: \"Source\"\napprovals:\n  - name: \"o\"\n    date: \"2026-01-02\"\n---\n\n# A\n\n## H2\nok\n`,
+      );
+      write(
+        path.join(contentDir, "docs", "b.md"),
+        `---\nslug: b\nversion: \"1\"\ntitle: B\nstage: official\nsummary: s\nupdatedAt: \"2026-01-03\"\nlastReviewedAt: \"2026-01-03\"\nowners: [\"o\"]\ntopics: [\"t\"]\ncanonicalFor: [\"t\"]\ncitations:\n  - label: \"Source\"\napprovals:\n  - name: \"o\"\n    date: \"2026-01-03\"\n---\n\n# B\n\n## H2\nok\n`,
+      );
+
+      const r = await runQa(root, contentDir);
+      expect(r.ok).toBe(false);
+      expect(r.failures.map((f) => f.code)).toContain("duplicate_canonical");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("restores AMBER_DOCS_CONTENT_DIR when contentDir option overrides it", async () => {
     const root = mkTmpDir();
     const prev = process.env.AMBER_DOCS_CONTENT_DIR;

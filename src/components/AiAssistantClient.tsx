@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { GlossaryEntry, Snippet } from "@/lib/content/blocks.server";
 import { geminiGenerateText } from "@/lib/ai/gemini";
+import { saveStudioImport } from "@/lib/studioImport";
 import { CopyButton } from "@/components/CopyButton";
 
 const GEMINI_KEY = "amber-docs:ai:gemini:key:v1";
@@ -110,6 +111,17 @@ export function AiAssistantClient({
       const m = localStorage.getItem(GEMINI_MODEL_KEY);
       if (k) setApiKey(k);
       if (m) setModel(m);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Optional: allow deep links like /assistant?task=...
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const task = sp.get("task") ?? sp.get("q");
+      if (task && task.trim()) setQuery(task);
     } catch {
       // ignore
     }
@@ -343,7 +355,29 @@ ${outputFormat}
       <section className="mt-6 card p-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display text-2xl font-semibold">AI output</h2>
-          <CopyButton text={output} label="Copy output" />
+          <div className="flex flex-wrap items-center gap-2">
+            <CopyButton text={output} label="Copy output" />
+            <button
+              className="btn btn-secondary"
+              type="button"
+              disabled={!output.trim()}
+              onClick={() => {
+                const ok = saveStudioImport({
+                  v: 1,
+                  source: "assistant",
+                  createdAt: new Date().toISOString(),
+                  docText: output,
+                });
+                if (!ok) {
+                  alert("Could not save the draft for Studio (local storage blocked). Copy the output instead.");
+                  return;
+                }
+                window.location.href = "/studio#import";
+              }}
+            >
+              Send to Write + publish
+            </button>
+          </div>
         </div>
         <textarea
           className="h-96 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
@@ -358,4 +392,3 @@ ${outputFormat}
     </main>
   );
 }
-

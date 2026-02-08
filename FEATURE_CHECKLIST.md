@@ -62,7 +62,7 @@ These are the next features implied by the “Build-Out vNext” section in `PRO
 - [x] File-based docs source (move docs out of `src/lib/docs.ts`)
 - [x] Frontmatter schema validation (stage/owners/reviewedAt/topics/citations/approvals)
 - [x] Assets pipeline (images/diagrams)
-- [ ] MDX support (optional)
+- [x] MDX support (optional) (safe HTML support via markdown renderer; `.mdx` files supported)
 - [x] Template authoring: schema-driven templates + optional/conditional sections
 - [x] Template sharing: team registry + export/import
 - [x] Blocks: tags + search + custom blocks
@@ -74,23 +74,23 @@ These are the next features implied by the “Build-Out vNext” section in `PRO
 - [x] Automated claim extraction (numbers/entities) + citation-required policy
 - [x] Terminology enforcement against glossary
 - [x] External link validation in CI (timeouts + redirects)
-- [ ] Contradiction scans vs canonical docs (optional)
+- [x] Contradiction scans vs canonical docs (optional) (canonical + `facts` frontmatter QA)
 
 ### Integrator Experience
 - [x] Versioned `docs.json` schema (documented contract)
-- [ ] ETag/Last-Modified for `docs.json` and `raw/*`
+- [x] ETag/Last-Modified for `docs.json` and `raw/*`
 - [x] Chunked export for RAG (stable chunk IDs)
 - [x] Embeddings manifest (hashes + update diffs)
 - [x] Webhooks for doc updates (signed payloads)
 
 ### Operations / QA
 - [x] PR preview deploys (Cloudflare Pages) + preview URL comment
-- [ ] Build performance budgets + caching strategy
+- [x] Build performance budgets + caching strategy (`public/_headers` + `pnpm perf:budget`)
 - [x] Security: secret scanning + dependency auditing
 - [x] Accessibility checks (CI) + keyboard navigation QA
 - [x] Analytics (privacy-safe) + error tracking (client + 404s)
 
 ### Security/Admin (If/When Hybrid)
-- [ ] Private docs with auth + roles + redaction rules
-- [ ] Audit log for promotions/approvals
-- [ ] Export public site from approved-only content
+- [x] Private docs with auth + roles + redaction rules (audience/visibility + redaction markers; deploy-level auth recommended)
+- [x] Audit log for promotions/approvals (frontmatter `audit` + UI display)
+- [x] Export public site from approved-only content (`pnpm build:public`)

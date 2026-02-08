@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import type { Approval, Citation, DocRecord, DocStage } from "../docs";
+import type { Approval, AuditEntry, Citation, DocRecord, DocStage, DocVisibility } from "../docs";
 import { getDocVersion, listDocVersions, resetDocsCache } from "./docs.server";
 import { isoDate, resolveVersionAndUpdatedAt, suggestedDocFileName } from "./docsWorkflow.shared";
 
@@ -11,6 +11,7 @@ type DocFrontmatter = {
   title: string;
   stage: DocStage;
   archived?: boolean;
+  visibility?: DocVisibility;
   summary: string;
   updatedAt: string;
   lastReviewedAt?: string;
@@ -21,8 +22,11 @@ type DocFrontmatter = {
   aiChecks?: string[];
   relatedContext?: string[];
   relatedSlugs?: string[];
+  canonicalFor?: string[];
+  facts?: Record<string, string>;
   citations?: Citation[];
   approvals?: Approval[];
+  audit?: AuditEntry[];
 };
 
 function contentRoot() {
@@ -65,6 +69,36 @@ function stripUndefined(value: unknown): unknown {
   return value;
 }
 
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function actorFromEnv(): string | undefined {
+  const raw = (process.env.AMBER_DOCS_ACTOR ?? "").trim();
+  return raw ? raw : undefined;
+}
+
+function safeAuditArray(v: unknown): AuditEntry[] {
+  if (!Array.isArray(v)) return [];
+  const out: AuditEntry[] = [];
+  for (const item of v) {
+    if (!item || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    if (typeof obj.at !== "string" || typeof obj.action !== "string") continue;
+    out.push({
+      at: obj.at,
+      action: obj.action,
+      actor: typeof obj.actor === "string" ? obj.actor : undefined,
+      note: typeof obj.note === "string" ? obj.note : undefined,
+      fromStage: obj.fromStage === "draft" || obj.fromStage === "final" || obj.fromStage === "official" ? obj.fromStage : undefined,
+      toStage: obj.toStage === "draft" || obj.toStage === "final" || obj.toStage === "official" ? obj.toStage : undefined,
+      fromArchived: typeof obj.fromArchived === "boolean" ? obj.fromArchived : undefined,
+      toArchived: typeof obj.toArchived === "boolean" ? obj.toArchived : undefined,
+    });
+  }
+  return out;
+}
+
 export function writeDocFile(filePath: string, args: { frontmatter: DocFrontmatter; markdown: string }) {
   const markdown = args.markdown.trimEnd() + "\n";
   // gray-matter uses js-yaml, which rejects `undefined` values anywhere in the object.
@@ -86,10 +120,12 @@ export function createDocFile(args: {
   archived?: boolean;
   // Convenience alias for archived (published=true => archived=false).
   published?: boolean;
+  visibility?: DocVisibility;
   owners?: string[];
   topics?: string[];
   collection?: string;
   order?: number;
+  actor?: string;
 }): { filePath: string; version: string } {
   resetDocsCache();
   ensureDocsDir();
@@ -104,7 +140,7 @@ export function createDocFile(args: {
   }
   const archived = args.archived ?? (args.published !== undefined ? !args.published : true);
 
-  const existing = getDocVersion(args.slug, version, { includeArchived: true });
+  const existing = getDocVersion(args.slug, version, { includeArchived: true, includeHidden: true, raw: true });
   if (existing) {
     throw new Error(`Doc already exists: ${args.slug}@${version}`);
   }
@@ -125,6 +161,7 @@ export function createDocFile(args: {
       title: args.title,
       stage,
       archived,
+      visibility: args.visibility ?? "internal",
       summary: args.summary,
       updatedAt,
       lastReviewedAt: stage === "official" ? updatedAt : undefined,
@@ -132,6 +169,13 @@ export function createDocFile(args: {
       topics: args.topics ?? [],
       collection: args.collection,
       order: args.order,
+      audit: [
+        {
+          at: nowIso(),
+          action: "create",
+          actor: args.actor?.trim() || actorFromEnv(),
+        },
+      ],
     },
     markdown,
   });
@@ -149,10 +193,12 @@ export function cloneLatestToNewVersion(args: {
   // Lifecycle for the new version.
   archived?: boolean;
   published?: boolean;
+  visibility?: DocVisibility;
+  actor?: string;
 }): { filePath: string; version: string; from: Pick<DocRecord, "version" | "updatedAt" | "sourcePath"> } {
   resetDocsCache();
   ensureDocsDir();
-  const all = listDocVersions(args.slug, { includeArchived: true });
+  const all = listDocVersions(args.slug, { includeArchived: true, includeHidden: true, raw: true });
   const base = (args.fromArchived ? all : all.filter((d) => !d.archived))[0] ?? all[0];
   if (!base) throw new Error(`No doc versions found for slug: ${args.slug}`);
 
@@ -160,7 +206,7 @@ export function cloneLatestToNewVersion(args: {
     version: args.newVersion ?? null,
     updatedAt: args.newUpdatedAt ?? null,
   });
-  if (getDocVersion(args.slug, version, { includeArchived: true })) {
+  if (getDocVersion(args.slug, version, { includeArchived: true, includeHidden: true, raw: true })) {
     throw new Error(`Doc already exists: ${args.slug}@${version}`);
   }
 
@@ -177,6 +223,15 @@ export function cloneLatestToNewVersion(args: {
     updatedAt,
     stage: args.stage ?? "draft",
     archived,
+    visibility: args.visibility ?? (frontmatter as unknown as DocFrontmatter).visibility ?? "internal",
+    audit: [
+      {
+        at: nowIso(),
+        action: "clone",
+        actor: args.actor?.trim() || actorFromEnv(),
+        note: `from ${base.version}`,
+      },
+    ],
   };
 
   const filePath = path.join(docsDir(), suggestedDocFileName(args.slug, version));
@@ -190,14 +245,21 @@ export function updateDocFile(args: {
   version: string;
   patchFrontmatter?: Partial<DocFrontmatter>;
   patchMarkdown?: string;
+  auditEntry?: AuditEntry;
 }): { filePath: string } {
   resetDocsCache();
-  const doc = getDocVersion(args.slug, args.version, { includeArchived: true });
+  const doc = getDocVersion(args.slug, args.version, { includeArchived: true, includeHidden: true, raw: true });
   if (!doc) throw new Error(`Doc not found: ${args.slug}@${args.version}`);
 
   const { frontmatter, markdown } = readDocFile(doc.sourcePath);
   const nextFm = { ...(frontmatter as Record<string, unknown>), ...(args.patchFrontmatter ?? {}) } as DocFrontmatter;
   const nextMd = args.patchMarkdown ?? markdown;
+
+  if (args.auditEntry) {
+    const prev = safeAuditArray((nextFm as unknown as { audit?: unknown }).audit);
+    const next = [...prev, args.auditEntry].slice(-200);
+    nextFm.audit = next;
+  }
 
   writeDocFile(doc.sourcePath, { frontmatter: nextFm, markdown: nextMd });
   resetDocsCache();
@@ -210,31 +272,63 @@ export function setDocStage(args: {
   stage: DocStage;
   reviewedAt?: string;
   approvals?: Approval[];
+  actor?: string;
 }): { filePath: string } {
   const reviewedAt = args.reviewedAt ?? isoDate(new Date());
+  const before = getDocVersion(args.slug, args.version, { includeArchived: true, includeHidden: true, raw: true });
+  if (!before) throw new Error(`Doc not found: ${args.slug}@${args.version}`);
   const patch: Partial<DocFrontmatter> = {
     stage: args.stage,
     // Official docs should always have a review date.
     lastReviewedAt: args.stage === "official" ? reviewedAt : undefined,
     approvals: args.approvals,
   };
-  return updateDocFile({ slug: args.slug, version: args.version, patchFrontmatter: patch });
+  return updateDocFile({
+    slug: args.slug,
+    version: args.version,
+    patchFrontmatter: patch,
+    auditEntry: {
+      at: nowIso(),
+      action: "set_stage",
+      actor: args.actor?.trim() || actorFromEnv(),
+      fromStage: before.stage,
+      toStage: args.stage,
+    },
+  });
 }
 
-export function archiveDocVersion(args: { slug: string; version: string; archived: boolean }): { filePath: string } {
-  return updateDocFile({ slug: args.slug, version: args.version, patchFrontmatter: { archived: args.archived } });
+export function archiveDocVersion(args: {
+  slug: string;
+  version: string;
+  archived: boolean;
+  actor?: string;
+}): { filePath: string } {
+  const before = getDocVersion(args.slug, args.version, { includeArchived: true, includeHidden: true, raw: true });
+  if (!before) throw new Error(`Doc not found: ${args.slug}@${args.version}`);
+  return updateDocFile({
+    slug: args.slug,
+    version: args.version,
+    patchFrontmatter: { archived: args.archived },
+    auditEntry: {
+      at: nowIso(),
+      action: args.archived ? "unpublish" : "publish",
+      actor: args.actor?.trim() || actorFromEnv(),
+      fromArchived: before.archived,
+      toArchived: args.archived,
+    },
+  });
 }
 
-export function publishDocVersion(args: { slug: string; version: string }): { filePath: string } {
-  return archiveDocVersion({ slug: args.slug, version: args.version, archived: false });
+export function publishDocVersion(args: { slug: string; version: string; actor?: string }): { filePath: string } {
+  return archiveDocVersion({ slug: args.slug, version: args.version, archived: false, actor: args.actor });
 }
 
-export function unpublishDocVersion(args: { slug: string; version: string }): { filePath: string } {
-  return archiveDocVersion({ slug: args.slug, version: args.version, archived: true });
+export function unpublishDocVersion(args: { slug: string; version: string; actor?: string }): { filePath: string } {
+  return archiveDocVersion({ slug: args.slug, version: args.version, archived: true, actor: args.actor });
 }
 
-export function finalizeDocVersion(args: { slug: string; version: string }): { filePath: string } {
-  return setDocStage({ slug: args.slug, version: args.version, stage: "final" });
+export function finalizeDocVersion(args: { slug: string; version: string; actor?: string }): { filePath: string } {
+  return setDocStage({ slug: args.slug, version: args.version, stage: "final", actor: args.actor });
 }
 
 export function promoteDocVersionToOfficial(args: {
@@ -242,6 +336,7 @@ export function promoteDocVersionToOfficial(args: {
   version: string;
   reviewedAt?: string;
   approvals?: Approval[];
+  actor?: string;
 }): { filePath: string } {
   return setDocStage({
     slug: args.slug,
@@ -249,6 +344,7 @@ export function promoteDocVersionToOfficial(args: {
     stage: "official",
     reviewedAt: args.reviewedAt,
     approvals: args.approvals,
+    actor: args.actor,
   });
 }
 

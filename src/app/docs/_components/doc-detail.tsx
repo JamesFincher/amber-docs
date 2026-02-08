@@ -30,6 +30,7 @@ export function DocDetail(props: {
   const reviewed = doc.lastReviewedAt ? fmtDate(doc.lastReviewedAt) : "Not reviewed";
   const reviewFlag = needsReview(doc) ? "Needs review" : null;
   const citationsFlag = hasCitations(doc) ? "Citations present" : null;
+  const visibilityLabel = doc.visibility === "public" ? "Public" : doc.visibility === "internal" ? "Internal" : "Private";
 
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
@@ -109,6 +110,10 @@ export function DocDetail(props: {
               <dt className="text-zinc-500">Owners</dt>
               <dd className="font-medium text-zinc-900 text-right">{owners}</dd>
             </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-zinc-500">Visibility</dt>
+              <dd className="font-medium text-zinc-900 text-right">{visibilityLabel}</dd>
+            </div>
             {doc.approvals.length ? (
               <div className="pt-2">
                 <dt className="text-zinc-500">Approvals</dt>
@@ -141,6 +146,27 @@ export function DocDetail(props: {
               </div>
             ) : null}
           </dl>
+
+          {doc.audit.length ? (
+            <details className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Audit log (advanced)</summary>
+              <div className="mt-3 grid gap-2 text-sm text-zinc-800">
+                {[...doc.audit]
+                  .slice(-50)
+                  .reverse()
+                  .map((a) => (
+                    <div key={`${a.at}:${a.action}`} className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="font-semibold">{a.action}</span>
+                        {a.actor ? <span className="text-zinc-600"> · {a.actor}</span> : null}
+                        {a.note ? <span className="text-zinc-600"> · {a.note}</span> : null}
+                      </div>
+                      <div className="text-zinc-600">{a.at}</div>
+                    </div>
+                  ))}
+              </div>
+            </details>
+          ) : null}
         </div>
       </header>
 

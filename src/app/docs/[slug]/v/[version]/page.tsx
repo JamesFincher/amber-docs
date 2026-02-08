@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getDocVersion, getLatestDoc, getPrevNextInCollection, loadAllDocs, listDocVersions } from "@/lib/content/docs.server";
+import { getDocVersion, getLatestDoc, getPrevNextInCollection, listDocSlugs, listDocVersions } from "@/lib/content/docs.server";
 import type { DocRecord } from "@/lib/docs";
 import { DocDetail } from "@/app/docs/_components/doc-detail";
 
 export function generateStaticParams() {
-  return loadAllDocs().filter((d) => !d.archived).map((d) => ({ slug: d.slug, version: d.version }));
+  return listDocSlugs().flatMap((slug) => listDocVersions(slug).map((d) => ({ slug: d.slug, version: d.version })));
 }
 
 export function generateMetadata({ params }: { params: { slug: string; version: string } }): Metadata {
