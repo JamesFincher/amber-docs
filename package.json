@@ -7,6 +7,9 @@
     "dev:web": "next dev",
     "dev:convex": "convex dev",
     "qa": "tsx scripts/content-qa.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
     "build": "pnpm qa && next build",
     "start": "next start",
     "lint": "eslint",
@@ -33,6 +36,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.0.18",
     "babel-plugin-react-compiler": "1.0.0",
     "concurrently": "^9.2.1",
     "eslint": "^9",
@@ -41,6 +45,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.20.5",
     "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.0",
+    "vitest": "^4.0.18",
     "wrangler": "^4.50.0"
   }
 }

@@ -36,7 +36,8 @@ const DocFrontmatterSchema = z.object({
 });
 
 function contentRoot() {
-  return path.join(process.cwd(), "content");
+  // Allows tests/CI to point at a fixture directory without changing process.cwd().
+  return process.env.AMBER_DOCS_CONTENT_DIR ?? path.join(process.cwd(), "content");
 }
 
 function docsDir() {
@@ -115,9 +116,12 @@ function parseDocFile(filePath: string): DocRecord {
 }
 
 let _cache: DocRecord[] | null = null;
+let _cacheRoot: string | null = null;
 
 export function loadAllDocs(): DocRecord[] {
-  if (_cache) return _cache;
+  const root = contentRoot();
+  if (_cache && _cacheRoot === root) return _cache;
+  _cacheRoot = root;
   const files = listDocFiles();
   const docs = files.map(parseDocFile);
 

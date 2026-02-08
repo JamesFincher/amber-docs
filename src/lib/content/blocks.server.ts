@@ -31,7 +31,7 @@ const GlossaryEntrySchema = z.object({
 });
 
 function contentRoot() {
-  return path.join(process.cwd(), "content");
+  return process.env.AMBER_DOCS_CONTENT_DIR ?? path.join(process.cwd(), "content");
 }
 
 function readJsonFile(filePath: string): unknown {
@@ -51,4 +51,3 @@ export function loadGlossary(): GlossaryEntry[] {
   const arr = z.array(GlossaryEntrySchema).parse(data);
   return arr.map((g) => ({ ...g, synonyms: g.synonyms ?? [], tags: g.tags ?? [] }));
 }
-

@@ -45,11 +45,11 @@ export type DocRecord = {
   sourcePath: string;
 };
 
-export function docsTopics(d: DocRecord): string[] {
+export function docsTopics(d: Pick<DocRecord, "topics">): string[] {
   return (d.topics ?? []).map((t) => t.trim()).filter(Boolean);
 }
 
-export function hasCitations(d: DocRecord): boolean {
+export function hasCitations(d: Pick<DocRecord, "citations">): boolean {
   return (d.citations?.length ?? 0) > 0;
 }
 

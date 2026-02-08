@@ -24,7 +24,7 @@ const DocTemplateSchema = z.object({
 });
 
 function contentRoot() {
-  return path.join(process.cwd(), "content");
+  return process.env.AMBER_DOCS_CONTENT_DIR ?? path.join(process.cwd(), "content");
 }
 
 function templatesDir() {
