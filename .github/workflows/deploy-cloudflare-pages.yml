@@ -37,8 +37,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Test
+        run: pnpm test
+
       - name: Build static export
-        run: pnpm build
+        run: pnpm build:public
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

@@ -62,22 +62,32 @@ export function FeedbackWidget(props: { doc: { slug: string; version: string; ti
     <div className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="font-display text-lg font-semibold">Feedback</div>
-          <div className="mt-1 text-sm text-zinc-600">Was this doc helpful?</div>
+          <div className="font-display text-xl font-semibold">Feedback</div>
+          <div className="mt-1 text-zinc-700">Was this document helpful?</div>
         </div>
-        <a href={issueUrl} className="btn btn-secondary" target="_blank" rel="noreferrer">
+        <a href={issueUrl} className="btn btn-secondary" target="_blank" rel="noopener noreferrer">
           Report issue
         </a>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" className={vote === "up" ? "btn btn-primary" : "btn btn-secondary"} onClick={() => set("up")}>
+        <button
+          type="button"
+          className={vote === "up" ? "btn btn-primary" : "btn btn-secondary"}
+          aria-pressed={vote === "up"}
+          onClick={() => set("up")}
+        >
           Helpful
         </button>
-        <button type="button" className={vote === "down" ? "btn btn-primary" : "btn btn-secondary"} onClick={() => set("down")}>
+        <button
+          type="button"
+          className={vote === "down" ? "btn btn-primary" : "btn btn-secondary"}
+          aria-pressed={vote === "down"}
+          onClick={() => set("down")}
+        >
           Not helpful
         </button>
-        {vote ? <div className="ml-1 text-sm text-zinc-500">Saved locally.</div> : null}
+        {vote ? <div className="ml-1 text-sm text-zinc-600">Saved locally.</div> : null}
       </div>
     </div>
   );

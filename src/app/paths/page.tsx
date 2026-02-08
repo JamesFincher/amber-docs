@@ -3,8 +3,8 @@ import { listCollections } from "@/lib/content/docs.server";
 import { stageBadgeClass } from "@/lib/docs";
 
 export const metadata = {
-  title: "Paths | Amber Protocol",
-  description: "Collections and recommended reading paths across the docs.",
+  title: "Reading lists | Amber Docs",
+  description: "Recommended reading lists that group documents in a useful order.",
 };
 
 function slugify(name: string) {
@@ -15,27 +15,34 @@ export default function PathsPage() {
   const collections = listCollections();
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Information architecture</p>
-            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Paths</h1>
+            <p className="text-sm font-semibold text-zinc-700">Reading lists</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Follow a reading list</h1>
           </div>
-          <nav className="flex flex-wrap gap-2 text-sm">
+          <nav className="flex flex-wrap gap-2">
             <Link href="/docs" className="btn btn-secondary">
-              Docs
+              Documents
+            </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask AI
             </Link>
             <Link href="/templates" className="btn btn-secondary">
               Templates
             </Link>
             <Link href="/blocks" className="btn btn-secondary">
-              Blocks
+              Reusable text
+            </Link>
+            <Link href="/help" className="btn btn-secondary">
+              Help
             </Link>
           </nav>
         </div>
-        <p className="max-w-3xl text-zinc-600">
-          Collections group docs into recommended reading paths. Each path is ordered and includes prev/next navigation.
+        <p className="max-w-3xl text-zinc-800">
+          Reading lists group documents into an easy order. When you open a document from a list, you will see{" "}
+          <span className="font-semibold">Prev</span> and <span className="font-semibold">Next</span> buttons to keep going.
         </p>
       </header>
 
@@ -45,10 +52,10 @@ export default function PathsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-2xl font-semibold">{c.name}</h2>
-                <div className="mt-1 text-sm text-zinc-600">{c.docs.length} docs</div>
+                <div className="mt-1 text-zinc-700">{c.docs.length} documents</div>
               </div>
               <Link href={`/paths/${encodeURIComponent(slugify(c.name))}`} className="btn btn-secondary">
-                View path
+                Open list
               </Link>
             </div>
 
@@ -57,7 +64,7 @@ export default function PathsPage() {
                 <Link
                   key={d.slug}
                   href={`/docs/${encodeURIComponent(d.slug)}`}
-                  className="rounded-2xl border border-zinc-200 bg-white/70 p-4 backdrop-blur hover:bg-white"
+                  className="rounded-2xl border border-zinc-200 bg-white p-5 hover:bg-zinc-50"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-semibold text-zinc-900">{d.title}</div>
@@ -73,4 +80,3 @@ export default function PathsPage() {
     </main>
   );
 }
-

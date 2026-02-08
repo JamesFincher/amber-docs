@@ -7,7 +7,7 @@ export type SynonymsMap = Record<string, string[]>;
 const SynonymsSchema = z.record(z.string(), z.array(z.string().min(1)));
 
 function contentRoot() {
-  return path.join(process.cwd(), "content");
+  return process.env.AMBER_DOCS_CONTENT_DIR ?? path.join(process.cwd(), "content");
 }
 
 export function loadSynonyms(): SynonymsMap {

@@ -5,8 +5,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocTemplate } from "@/lib/templates";
 import { buildMarkdownSkeleton, buildPrompt, buildSectionPromptPack } from "@/lib/templates";
 import { CopyButton } from "@/components/CopyButton";
+import { geminiGenerateText } from "@/lib/ai/gemini";
+import { saveStudioImport } from "@/lib/studioImport";
 
 const CUSTOM_KEY = "amber-docs:templates:custom:v1";
+const GEMINI_KEY = "amber-docs:ai:gemini:key:v1";
+const GEMINI_MODEL_KEY = "amber-docs:ai:gemini:model:v1";
 
 function uniqById(templates: DocTemplate[]): DocTemplate[] {
   const map = new Map<string, DocTemplate>();
@@ -64,6 +68,10 @@ function writeCustomTemplates(templates: DocTemplate[]) {
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(templates, null, 2));
 }
 
+function slugifyTitle(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "new-doc";
+}
+
 export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
   const [custom, setCustom] = useState<DocTemplate[]>([]);
   const [templateId, setTemplateId] = useState<string>(templates[0]?.id ?? "");
@@ -71,6 +79,11 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [enabledOptional, setEnabledOptional] = useState<Set<string>>(new Set());
   const [customJson, setCustomJson] = useState<string>("[]");
+  const [geminiApiKey, setGeminiApiKey] = useState<string>("");
+  const [geminiModel, setGeminiModel] = useState<string>("gemini-2.0-flash");
+  const [generated, setGenerated] = useState<string>("");
+  const [genBusy, setGenBusy] = useState<boolean>(false);
+  const [genError, setGenError] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -78,6 +91,17 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     const loaded = readCustomTemplates();
     setCustom(loaded);
     setCustomJson(JSON.stringify(loaded, null, 2));
+  }, []);
+
+  useEffect(() => {
+    try {
+      const key = localStorage.getItem(GEMINI_KEY);
+      const model = localStorage.getItem(GEMINI_MODEL_KEY);
+      if (key) setGeminiApiKey(key);
+      if (model) setGeminiModel(model);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const allTemplates = useMemo(() => uniqById([...templates, ...custom]), [templates, custom]);
@@ -128,6 +152,16 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     URL.revokeObjectURL(url);
   }
 
+  function downloadText(filename: string, text: string, mime = "text/plain") {
+    const blob = new Blob([text], { type: `${mime}; charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function onImportFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -155,39 +189,82 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     alert("Saved custom templates locally.");
   }
 
+  async function onGenerateWithGemini() {
+    const key = geminiApiKey.trim();
+    const model = geminiModel.trim();
+    if (!key) return alert("Add your Google AI (Gemini) API key first.");
+    if (!model) return alert("Choose a Gemini model first.");
+
+    setGenBusy(true);
+    setGenError(null);
+    try {
+      try {
+        localStorage.setItem(GEMINI_KEY, key);
+        localStorage.setItem(GEMINI_MODEL_KEY, model);
+      } catch {
+        // ignore
+      }
+
+      const prompt = `${promptOutput.trim()}\n\nOutput requirements:\n- Return only the final Markdown document.\n- Do not wrap it in code fences.\n`;
+      const out = await geminiGenerateText({
+        apiKey: key,
+        model,
+        prompt,
+        temperature: 0.4,
+        maxOutputTokens: 4096,
+      });
+      setGenerated(out.text.trimEnd() + "\n");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setGenError(msg);
+      setGenerated("");
+    } finally {
+      setGenBusy(false);
+    }
+  }
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Writer tools</p>
-            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Template tool</h1>
+            <p className="text-sm font-semibold text-zinc-700">Templates</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Write a document</h1>
           </div>
-          <nav className="flex flex-wrap gap-2 text-sm">
+          <nav className="flex flex-wrap gap-2">
             <Link href="/docs" className="btn btn-secondary">
-              Docs
+              Documents
+            </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask AI
+            </Link>
+            <Link href="/studio" className="btn btn-secondary">
+              Write + publish
             </Link>
             <Link href="/blocks" className="btn btn-secondary">
-              Blocks
+              Reusable text
             </Link>
             <Link href="/" className="btn btn-secondary">
               Home
             </Link>
+            <Link href="/help" className="btn btn-secondary">
+              Help
+            </Link>
           </nav>
         </div>
-        <p className="max-w-3xl text-zinc-600">
-          Generate uniform document shapes and AI-ready prompts. Use built-in templates, or bring your own
-          via JSON.
+        <p className="max-w-3xl text-zinc-800">
+          Pick a template, fill in a few details, then copy the prompt or the Markdown scaffold. Advanced: you can import/export custom templates as JSON.
         </p>
       </header>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="card p-6">
           <div className="grid gap-4">
-            <label className="block text-sm font-medium text-zinc-700">
-              Template
+            <div className="font-display text-2xl font-semibold">Step 1: Pick a template</div>
+            <label className="block text-base font-semibold text-zinc-800">
+              Template type
               <select
-                className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="mt-2 w-full control"
                 value={templateId}
                 onChange={(e) => setTemplateId(e.target.value)}
               >
@@ -199,10 +276,10 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
               </select>
             </label>
 
-            <label className="block text-sm font-medium text-zinc-700">
-              Topic
+            <label className="block text-base font-semibold text-zinc-800">
+              Topic (document title)
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="mt-2 w-full control"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="Example: Q3 Treasury Strategy"
@@ -210,7 +287,7 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
             </label>
 
             {selectedTemplate ? (
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+              <div className="rounded-xl border border-zinc-200 bg-white p-4 text-base text-zinc-800">
                 <div className="font-semibold text-zinc-900">{selectedTemplate.name}</div>
                 <div className="mt-1">{selectedTemplate.description}</div>
                 {selectedTemplate.tags.length ? (
@@ -227,11 +304,12 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
 
             {selectedTemplate ? (
               <div className="grid gap-3">
+                <div className="font-display text-2xl font-semibold">Step 2: Fill in details</div>
                 {selectedTemplate.requiredFields.map((field) => (
-                  <label key={field.key} className="block text-sm font-medium text-zinc-700">
+                  <label key={field.key} className="block text-base font-semibold text-zinc-800">
                     {field.label}
                     <input
-                      className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                      className="mt-2 w-full control"
                       value={values[field.key] ?? ""}
                       onChange={(e) =>
                         setValues((prev) => ({
@@ -250,7 +328,7 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
 
         <div className="card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">Sections</h2>
+            <div className="font-display text-2xl font-semibold">Step 3: Choose sections</div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 className="btn btn-secondary"
@@ -278,13 +356,17 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
           {selectedTemplate ? (
             <div className="mt-4 grid gap-2">
               {selectedTemplate.sections.map((s) => (
-                <label key={s.title} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2">
-                  <div className="text-sm font-medium text-zinc-900">{s.title}</div>
+                <label
+                  key={s.title}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3"
+                >
+                  <div className="text-base font-semibold text-zinc-900">{s.title}</div>
                   {s.optional ? (
                     <input
                       type="checkbox"
                       checked={enabledOptional.has(s.title)}
                       onChange={() => toggleOptional(s.title)}
+                      className="h-5 w-5"
                     />
                   ) : (
                     <span className="chip chip-muted">required</span>
@@ -295,10 +377,11 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
           ) : null}
 
           <details className="mt-6">
-            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Custom template registry (local JSON)</summary>
-            <p className="mt-2 text-sm text-zinc-600">
-              Paste an array of templates to save locally (in this browser). This is the simplest path for
-              team sharing: export JSON and commit it to <code>content/templates/</code>.
+            <summary className="cursor-pointer text-base font-semibold text-zinc-900">
+              Advanced: Custom templates (JSON)
+            </summary>
+            <p className="mt-2 text-zinc-700">
+              You can save templates locally (in this browser), or export JSON and commit it to <code>content/templates/</code>.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button className="btn btn-primary" onClick={onSaveCustomJson}>
@@ -318,12 +401,15 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
                 Clear custom
               </button>
             </div>
-            <textarea
-              className="mt-3 h-56 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-50"
-              value={customJson}
-              onChange={(e) => setCustomJson(e.target.value)}
-              spellCheck={false}
-            />
+            <label className="mt-3 block">
+              <div className="text-sm font-semibold text-zinc-800">Custom template JSON</div>
+              <textarea
+                className="mt-2 h-56 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-sm text-zinc-50"
+                value={customJson}
+                onChange={(e) => setCustomJson(e.target.value)}
+                spellCheck={false}
+              />
+            </label>
           </details>
         </div>
       </section>
@@ -331,11 +417,11 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
         <div className="card p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">Prompt output</h2>
+            <h2 className="font-display text-2xl font-semibold">Copy: AI prompt</h2>
             <CopyButton text={promptOutput} label="Copy prompt" />
           </div>
           <textarea
-            className="h-72 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-50"
+            className="h-72 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
             value={promptOutput}
             readOnly
             spellCheck={false}
@@ -344,11 +430,41 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
 
         <div className="card p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">Markdown scaffold</h2>
-            <CopyButton text={markdownOutput} label="Copy scaffold" />
+            <h2 className="font-display text-2xl font-semibold">Copy: Markdown scaffold</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <CopyButton text={markdownOutput} label="Copy scaffold" />
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={!markdownOutput.trim()}
+                onClick={() => {
+                  const ok = saveStudioImport({
+                    v: 1,
+                    source: "templates",
+                    createdAt: new Date().toISOString(),
+                    markdown: markdownOutput,
+                    suggested: {
+                      title: topic,
+                      slug: slugifyTitle(topic),
+                      summary: selectedTemplate ? `Draft created from template: ${selectedTemplate.name}` : "Draft created from template",
+                      stage: "draft",
+                      visibility: "internal",
+                      topics: selectedTemplate?.tags ?? [],
+                    },
+                  });
+                  if (!ok) {
+                    alert("Could not save the draft for Studio (local storage blocked). Copy the scaffold instead.");
+                    return;
+                  }
+                  window.location.href = "/studio#import";
+                }}
+              >
+                Send to Write + publish
+              </button>
+            </div>
           </div>
           <textarea
-            className="h-72 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-50"
+            className="h-72 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
             value={markdownOutput}
             readOnly
             spellCheck={false}
@@ -359,9 +475,112 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
       <section className="mt-8 card p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl font-semibold">Section-by-section prompt pack</h2>
-            <p className="mt-1 text-sm text-zinc-600">
-              Use these prompts to draft each section independently (rewrite + fact-check notes included).
+            <h2 className="font-display text-2xl font-semibold">Step 4 (Optional): Generate with Google AI</h2>
+            <p className="mt-1 text-zinc-700">
+              This calls the Gemini API directly from your browser. Your API key is saved locally on this computer (in this browser) to avoid retyping.
+            </p>
+          </div>
+          <button className="btn btn-primary" type="button" onClick={onGenerateWithGemini} disabled={genBusy}>
+            {genBusy ? "Generating..." : "Generate Markdown"}
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <label className="block">
+            <div className="text-sm font-semibold text-zinc-800">Gemini API key</div>
+            <input
+              className="mt-2 w-full control"
+              value={geminiApiKey}
+              onChange={(e) => setGeminiApiKey(e.target.value)}
+              placeholder="Paste your key here"
+              type="password"
+              autoComplete="off"
+            />
+            <div className="mt-2 text-sm text-zinc-600">
+              Tip: If you do not want it remembered, clear this field after you generate.
+            </div>
+          </label>
+
+          <label className="block">
+            <div className="text-sm font-semibold text-zinc-800">Model</div>
+            <input
+              className="mt-2 w-full control"
+              value={geminiModel}
+              onChange={(e) => setGeminiModel(e.target.value)}
+              placeholder="Example: gemini-2.0-flash"
+              autoComplete="off"
+            />
+            <div className="mt-2 text-sm text-zinc-600">
+              Suggested: <span className="font-semibold">gemini-2.0-flash</span> for speed, or <span className="font-semibold">gemini-2.5-pro</span> for depth (if available).
+            </div>
+          </label>
+        </div>
+
+        {genError ? (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+            <div className="font-semibold">Generation failed</div>
+            <div className="mt-1">{genError}</div>
+          </div>
+        ) : null}
+
+        <div className="mt-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="font-display text-2xl font-semibold">Generated Markdown</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <CopyButton text={generated} label="Copy generated" />
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={!generated.trim()}
+                onClick={() => {
+                  const ok = saveStudioImport({
+                    v: 1,
+                    source: "templates",
+                    createdAt: new Date().toISOString(),
+                    markdown: generated,
+                    suggested: {
+                      title: topic,
+                      slug: slugifyTitle(topic),
+                      summary: selectedTemplate ? `Draft created from template: ${selectedTemplate.name}` : "Draft created from template",
+                      stage: "draft",
+                      visibility: "internal",
+                      topics: selectedTemplate?.tags ?? [],
+                    },
+                  });
+                  if (!ok) {
+                    alert("Could not save the draft for Studio (local storage blocked). Copy the generated Markdown instead.");
+                    return;
+                  }
+                  window.location.href = "/studio#import";
+                }}
+              >
+                Send to Write + publish
+              </button>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={!generated.trim()}
+                onClick={() => downloadText(`${topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "document"}.md`, generated, "text/markdown")}
+              >
+                Download .md
+              </button>
+            </div>
+          </div>
+          <textarea
+            className="h-80 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
+            value={generated}
+            readOnly
+            spellCheck={false}
+          />
+        </div>
+      </section>
+
+      <section className="mt-8 card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl font-semibold">Copy: Section-by-section prompts</h2>
+            <p className="mt-1 text-zinc-700">
+              Use these prompts to draft each section independently.
             </p>
           </div>
           <CopyButton
@@ -371,13 +590,13 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
         </div>
         <div className="mt-4 grid gap-4">
           {sectionPrompts.map((p) => (
-            <div key={p.section} className="rounded-2xl border border-zinc-200 bg-white/70 p-4 backdrop-blur">
+            <div key={p.section} className="rounded-2xl border border-zinc-200 bg-white p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="font-semibold text-zinc-900">{p.section}</div>
                 <CopyButton text={p.prompt} label="Copy section prompt" />
               </div>
               <textarea
-                className="mt-3 h-44 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-50"
+                className="mt-3 h-44 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
                 value={p.prompt}
                 readOnly
                 spellCheck={false}
@@ -389,4 +608,3 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     </main>
   );
 }
-

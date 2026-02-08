@@ -87,20 +87,25 @@ export function NotesPanel(props: { doc: { slug: string; version: string; toc: T
     <div className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="font-display text-lg font-semibold">Notes</div>
-          <div className="mt-1 text-sm text-zinc-600">Local review notes (per version).</div>
+          <div className="font-display text-xl font-semibold">Notes</div>
+          <div className="mt-1 text-zinc-700">Personal notes for this document version (stored on this computer).</div>
         </div>
-        <label className="flex items-center gap-2 text-sm text-zinc-700">
-          <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} />
+        <label className="flex items-center gap-3 text-base text-zinc-800">
+          <input
+            type="checkbox"
+            checked={showResolved}
+            onChange={(e) => setShowResolved(e.target.checked)}
+            className="h-5 w-5"
+          />
           Show resolved
         </label>
       </div>
 
       <div className="mt-4 grid gap-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <label className="text-sm font-semibold text-zinc-800">
           Section
           <select
-            className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+            className="mt-2 w-full control"
             value={sectionId}
             onChange={(e) => setSectionId(e.target.value)}
           >
@@ -111,12 +116,15 @@ export function NotesPanel(props: { doc: { slug: string; version: string; toc: T
             ))}
           </select>
         </label>
-        <textarea
-          className="h-24 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
-          placeholder="Add a note (what changed, what needs verification, open questions)."
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
+        <label className="block">
+          <div className="text-sm font-semibold text-zinc-800">Note</div>
+          <textarea
+            className="mt-2 h-28 w-full control"
+            placeholder="Add a note (what to verify, what changed, open questions)."
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+          />
+        </label>
         <div className="flex items-center justify-between gap-3">
           <button className="btn btn-primary" onClick={add} type="button">
             Add note
@@ -139,10 +147,10 @@ export function NotesPanel(props: { doc: { slug: string; version: string; toc: T
       {visible.length ? (
         <div className="mt-4 grid gap-3">
           {visible.map((n) => (
-            <div key={n.id} className="rounded-2xl border border-zinc-200 bg-white/70 p-4 backdrop-blur">
+            <div key={n.id} className="rounded-2xl border border-zinc-200 bg-white p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-600">
                     <span>{fmt(n.createdAt)}</span>
                     {n.sectionId ? (
                       <a href={`#${n.sectionId}`} className="underline decoration-black/10 underline-offset-4 hover:decoration-black/30">
@@ -153,7 +161,7 @@ export function NotesPanel(props: { doc: { slug: string; version: string; toc: T
                     )}
                     {n.resolved ? <span className="chip chip-muted">resolved</span> : null}
                   </div>
-                  <div className="mt-2 whitespace-pre-wrap text-sm text-zinc-800">{n.body}</div>
+                  <div className="mt-3 whitespace-pre-wrap text-zinc-900">{n.body}</div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
@@ -182,9 +190,8 @@ export function NotesPanel(props: { doc: { slug: string; version: string; toc: T
           ))}
         </div>
       ) : (
-        <div className="mt-4 text-sm text-zinc-500">No notes yet.</div>
+        <div className="mt-4 text-zinc-700">No notes yet.</div>
       )}
     </div>
   );
 }
-

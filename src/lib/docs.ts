@@ -1,5 +1,7 @@
 export type DocStage = "draft" | "final" | "official";
 
+export type DocVisibility = "public" | "internal" | "private";
+
 export type Citation = {
   label: string;
   url?: string;
@@ -8,6 +10,17 @@ export type Citation = {
 export type Approval = {
   name: string;
   date: string;
+};
+
+export type AuditEntry = {
+  at: string;
+  action: string;
+  actor?: string;
+  note?: string;
+  fromStage?: DocStage;
+  toStage?: DocStage;
+  fromArchived?: boolean;
+  toArchived?: boolean;
 };
 
 export type TocItem = {
@@ -21,6 +34,8 @@ export type DocRecord = {
   version: string;
   title: string;
   stage: DocStage;
+  archived: boolean;
+  visibility: DocVisibility;
   updatedAt: string;
   lastReviewedAt?: string;
   owners: string[];
@@ -32,8 +47,11 @@ export type DocRecord = {
   aiChecks: string[];
   relatedContext: string[];
   relatedSlugs: string[];
+  canonicalFor: string[];
+  facts: Record<string, string>;
   citations: Citation[];
   approvals: Approval[];
+  audit: AuditEntry[];
 
   // Derived fields (build-time).
   toc: TocItem[];
@@ -45,11 +63,11 @@ export type DocRecord = {
   sourcePath: string;
 };
 
-export function docsTopics(d: DocRecord): string[] {
+export function docsTopics(d: Pick<DocRecord, "topics">): string[] {
   return (d.topics ?? []).map((t) => t.trim()).filter(Boolean);
 }
 
-export function hasCitations(d: DocRecord): boolean {
+export function hasCitations(d: Pick<DocRecord, "citations">): boolean {
   return (d.citations?.length ?? 0) > 0;
 }
 

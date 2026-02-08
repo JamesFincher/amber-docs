@@ -1,16 +1,14 @@
 import crypto from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 import { listLatestDocs } from "../src/lib/content/docs.server";
+import { buildDocsWebhookPayload, sendDocsWebhook } from "../src/lib/webhooks/docsWebhook";
 
 function sha256(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex");
 }
 
-function hmacSha256(secret: string, body: string): string {
-  return crypto.createHmac("sha256", secret).update(body).digest("hex");
-}
-
-async function main() {
+export async function main() {
   const url = process.env.DOCS_WEBHOOK_URL;
   const secret = process.env.DOCS_WEBHOOK_SECRET;
   const event = process.env.DOCS_WEBHOOK_EVENT ?? "docs.updated";
@@ -21,42 +19,22 @@ async function main() {
   const docs = listLatestDocs();
   const buildId = sha256(docs.map((d) => `${d.slug}@${d.version}:${d.contentHash}`).join("\n"));
 
-  const payload = {
+  const payload = buildDocsWebhookPayload({
     event,
     generatedAt: new Date().toISOString(),
-    buildId,
-    docs: docs.map((d) => ({
-      slug: d.slug,
-      version: d.version,
-      updatedAt: d.updatedAt,
-      contentHash: d.contentHash,
-      url: `/docs/${encodeURIComponent(d.slug)}`,
-    })),
-  };
-
-  const body = JSON.stringify(payload);
-  const sig = hmacSha256(secret, body);
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-amber-event": event,
-      "x-amber-signature": `sha256=${sig}`,
-    },
-    body,
+    docs,
   });
+  // Back-compat: retain existing buildId computation in the emitted payload.
+  payload.buildId = buildId;
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Webhook failed: ${res.status} ${res.statusText} ${text}`);
-  }
-
-  console.log(`Webhook sent: ${url} (${res.status})`);
+  const r = await sendDocsWebhook({ url, secret, payload });
+  console.log(`Webhook sent: ${url} (${r.status})`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
-
+const argv1 = process.argv[1];
+if (argv1 && import.meta.url === pathToFileURL(argv1).href) {
+  main().catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  });
+}

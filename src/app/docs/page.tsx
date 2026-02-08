@@ -3,8 +3,8 @@ import { listLatestDocs } from "@/lib/content/docs.server";
 import { DocsLibraryClient } from "./DocsLibraryClient";
 
 export const metadata = {
-  title: "Docs | Amber Protocol",
-  description: "Browse draft, final, and official documentation",
+  title: "Documents | Amber Docs",
+  description: "Search and browse documentation (draft, final, official).",
 };
 
 export default function DocsIndexPage({
@@ -42,28 +42,34 @@ export default function DocsIndexPage({
     bookmarkedOnly: searchParams?.bookmarked === "1",
   };
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Docs library</p>
-            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Documentation</h1>
+            <p className="text-sm font-semibold text-zinc-700">Documents</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Find a document</h1>
           </div>
-          <nav className="flex flex-wrap gap-2 text-sm">
+          <nav className="flex flex-wrap gap-2">
             <Link href="/paths" className="btn btn-secondary">
-              Paths
+              Reading lists
+            </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask AI
             </Link>
             <Link href="/templates" className="btn btn-secondary">
               Templates
             </Link>
             <Link href="/blocks" className="btn btn-secondary">
-              Blocks
+              Reusable text
+            </Link>
+            <Link href="/help" className="btn btn-secondary">
+              Help
             </Link>
           </nav>
         </div>
-        <p className="max-w-3xl text-zinc-600">
-          Search across titles, headings, and body text. Filter by stage and topic, then open a doc to
-          view AI checks, related context, and version history.
+        <p className="max-w-3xl text-zinc-800">
+          Start by searching for a word or phrase. Then use the filters to narrow down by status, topic, or reading list.
+          Bookmarks and saved searches are stored on this computer.
         </p>
       </header>
 

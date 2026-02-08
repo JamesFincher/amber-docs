@@ -2,8 +2,8 @@ import { loadDisclaimers, loadGlossary } from "@/lib/content/blocks.server";
 import { BlocksClient } from "./blocks-client";
 
 export const metadata = {
-  title: "Blocks | Amber Protocol",
-  description: "Reusable snippet library (disclaimers, glossary, standard callouts).",
+  title: "Reusable text | Amber Docs",
+  description: "Copy standard disclaimers and glossary definitions (and save custom ones locally).",
 };
 
 export default function BlocksPage() {
@@ -11,4 +11,3 @@ export default function BlocksPage() {
   const glossary = loadGlossary();
   return <BlocksClient disclaimers={disclaimers} glossary={glossary} />;
 }
-
