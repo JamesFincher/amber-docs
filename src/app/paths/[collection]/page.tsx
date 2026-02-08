@@ -14,7 +14,7 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { collection: string } }): Metadata {
   return {
-    title: `Reading list | ${params.collection} | Amber Protocol`,
+    title: `Reading list | ${params.collection} | Amber Docs`,
   };
 }
 
@@ -24,7 +24,7 @@ export default function PathDetailPage({ params }: { params: { collection: strin
   if (!c) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <nav className="flex flex-wrap gap-2">
           <Link href="/" className="btn btn-secondary">
@@ -35,6 +35,9 @@ export default function PathDetailPage({ params }: { params: { collection: strin
           </Link>
           <Link href="/docs" className="btn btn-secondary">
             Documents
+          </Link>
+          <Link href="/assistant" className="btn btn-secondary">
+            Ask AI
           </Link>
           <Link href="/help" className="btn btn-secondary">
             Help

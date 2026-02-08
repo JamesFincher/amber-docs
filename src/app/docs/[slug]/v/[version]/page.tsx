@@ -10,9 +10,9 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string; version: string } }): Metadata {
   const doc = getDocVersion(params.slug, params.version);
-  if (!doc) return { title: "Doc Not Found | Amber Protocol" };
+  if (!doc) return { title: "Doc Not Found | Amber Docs" };
   return {
-    title: `${doc.title} (v${doc.version}) | Amber Protocol`,
+    title: `${doc.title} (v${doc.version}) | Amber Docs`,
     description: doc.summary,
   };
 }

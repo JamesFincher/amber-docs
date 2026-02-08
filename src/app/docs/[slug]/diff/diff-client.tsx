@@ -24,7 +24,7 @@ export function DiffClient(props: { slug: string; versions: Array<Pick<DocRecord
   const visibleParts = showUnchanged ? parts : parts.filter((p) => p.added || p.removed);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -37,6 +37,9 @@ export function DiffClient(props: { slug: string; versions: Array<Pick<DocRecord
           <nav className="flex flex-wrap gap-2">
             <Link href={`/docs/${encodeURIComponent(props.slug)}`} className="btn btn-secondary">
               Back to doc
+            </Link>
+            <Link href={`/assistant?doc=${encodeURIComponent(props.slug)}`} className="btn btn-secondary">
+              Ask AI
             </Link>
             <Link href="/docs" className="btn btn-secondary">
               Documents
@@ -53,7 +56,7 @@ export function DiffClient(props: { slug: string; versions: Array<Pick<DocRecord
           <label className="block text-base font-semibold text-zinc-800">
             Older version (From)
             <select
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
             >
@@ -67,7 +70,7 @@ export function DiffClient(props: { slug: string; versions: Array<Pick<DocRecord
           <label className="block text-base font-semibold text-zinc-800">
             Newer version (To)
             <select
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
               value={to}
               onChange={(e) => setTo(e.target.value)}
             >

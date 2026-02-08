@@ -2,7 +2,7 @@ import { loadDisclaimers, loadGlossary } from "@/lib/content/blocks.server";
 import { BlocksClient } from "./blocks-client";
 
 export const metadata = {
-  title: "Reusable text | Amber Protocol",
+  title: "Reusable text | Amber Docs",
   description: "Copy standard disclaimers and glossary definitions (and save custom ones locally).",
 };
 

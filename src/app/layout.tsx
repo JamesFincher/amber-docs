@@ -38,14 +38,14 @@ export default function RootLayout({
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
   return (
     <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable} ${fontMono.variable}`}>
-      <body className="antialiased">
+      <body className="antialiased text-zinc-950">
         <a href="#main" className="skip-link">
           Skip to main content
         </a>
         <SiteHeader />
-        <div id="main" tabIndex={-1} className="min-h-[calc(100vh-4rem)] focus:outline-none">
+        <main id="main" tabIndex={-1} className="min-h-[calc(100vh-4rem)] focus:outline-none">
           {children}
-        </div>
+        </main>
         <SiteFooter />
         <Telemetry />
         {plausibleDomain ? (

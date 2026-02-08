@@ -3,7 +3,7 @@ import { loadTemplates } from "@/lib/content/templates.server";
 import { AiAssistantClient } from "@/components/AiAssistantClient";
 
 export const metadata = {
-  title: "Ask AI | Amber Protocol",
+  title: "Ask AI | Amber Docs",
   description: "Use Google AI (Gemini) with internal docs context to draft or improve documents.",
 };
 

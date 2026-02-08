@@ -17,12 +17,15 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
   }
 
   const textLabel = state === "copied" ? "Copied" : state === "error" ? "Copy failed" : label;
+  const variant = state === "copied" ? "btn btn-primary" : state === "error" ? "btn btn-danger" : "btn btn-secondary";
 
   return (
     <button
       type="button"
       onClick={onCopy}
-      className="btn btn-secondary"
+      className={variant}
+      aria-live="polite"
+      title={label}
     >
       {textLabel}
     </button>

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-black/10 bg-white/85">
+    <header className="sticky top-0 z-50 border-b border-black/10 bg-white/80 backdrop-blur">
       <div className="mx-auto w-full max-w-7xl px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -44,8 +44,11 @@ export function SiteHeader() {
               <input
                 name="q"
                 aria-label="Search documents"
+                type="search"
+                enterKeyHint="search"
+                autoComplete="off"
                 placeholder="Type words here, for example: treasury, runbook, approvals"
-                className="w-full flex-1 rounded-xl border border-black/15 bg-white px-4 py-3 text-base outline-none focus:ring-4 focus:ring-black/10 sm:min-w-[28rem]"
+                className="control w-full flex-1 sm:min-w-[28rem]"
               />
               <button type="submit" className="btn btn-primary">
                 Search
@@ -53,7 +56,11 @@ export function SiteHeader() {
             </div>
           </label>
           <div className="mt-2 text-sm text-zinc-600">
-            Tip: You can also filter by status, topic, and reading list on the Documents page.
+            Tip: You can also filter by status, topic, and reading list on the Documents page. Not sure what to search?{" "}
+            <Link href="/assistant" className="font-semibold underline decoration-black/10 underline-offset-4 hover:decoration-black/30">
+              Ask Amber AI
+            </Link>
+            .
           </div>
         </form>
       </div>

@@ -37,7 +37,7 @@ export function Markdown({ value }: { value: string }) {
   }
 
   return (
-    <div className="prose prose-zinc prose-lg max-w-none prose-headings:scroll-mt-28 prose-headings:font-display prose-p:leading-relaxed prose-a:font-semibold prose-a:text-zinc-950 prose-a:decoration-black/20 hover:prose-a:decoration-black/40 prose-pre:rounded-2xl prose-pre:border prose-pre:border-black/10 prose-pre:bg-zinc-950 prose-pre:text-zinc-50 prose-code:rounded prose-code:bg-black/5 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.9em] prose-code:text-zinc-900">
+    <div className="prose prose-zinc prose-lg max-w-none prose-headings:scroll-mt-28 prose-headings:font-display prose-headings:tracking-tight prose-p:leading-relaxed prose-li:leading-relaxed prose-strong:text-zinc-950 prose-hr:border-black/10 prose-a:font-semibold prose-a:text-zinc-950 prose-a:decoration-black/20 hover:prose-a:decoration-black/40 prose-blockquote:border-l-amber-300 prose-blockquote:bg-white/70 prose-blockquote:py-1 prose-pre:rounded-2xl prose-pre:border prose-pre:border-black/10 prose-pre:bg-zinc-950 prose-pre:text-zinc-50 prose-code:rounded prose-code:bg-black/5 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.9em] prose-code:text-zinc-900 prose-summary:cursor-pointer">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}

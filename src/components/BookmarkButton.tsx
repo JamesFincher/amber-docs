@@ -31,6 +31,7 @@ export function BookmarkButton({ slug }: { slug: string }) {
     <button
       type="button"
       className={bookmarked ? "btn btn-primary" : "btn btn-secondary"}
+      aria-pressed={bookmarked}
       onClick={() => {
         const bm = readBookmarks();
         if (bm.has(slug)) bm.delete(slug);

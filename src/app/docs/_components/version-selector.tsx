@@ -32,7 +32,7 @@ export function VersionSelector(props: {
   }, [props.versions, latestVersion]);
 
   return (
-    <label className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base font-semibold text-zinc-800">
+    <label className="flex items-center gap-3 control font-semibold text-zinc-800">
       <span className="text-zinc-600">Version</span>
       <select
         className="bg-transparent text-base font-semibold text-zinc-900 outline-none"

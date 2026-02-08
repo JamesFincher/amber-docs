@@ -3,12 +3,23 @@
 import { useEffect } from "react";
 
 function post(url: string, payload: unknown) {
-  return fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-    keepalive: true,
-  }).catch(() => {});
+  try {
+    const body = JSON.stringify(payload);
+    // Prefer sendBeacon for unload-safety; fall back to fetch.
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const blob = new Blob([body], { type: "application/json" });
+      const ok = navigator.sendBeacon(url, blob);
+      if (ok) return Promise.resolve();
+    }
+    return fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    return Promise.resolve();
+  }
 }
 
 export function Telemetry() {

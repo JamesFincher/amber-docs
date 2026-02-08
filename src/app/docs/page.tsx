@@ -3,7 +3,7 @@ import { listLatestDocs } from "@/lib/content/docs.server";
 import { DocsLibraryClient } from "./DocsLibraryClient";
 
 export const metadata = {
-  title: "Documents | Amber Protocol",
+  title: "Documents | Amber Docs",
   description: "Search and browse documentation (draft, final, official).",
 };
 
@@ -42,7 +42,7 @@ export default function DocsIndexPage({
     bookmarkedOnly: searchParams?.bookmarked === "1",
   };
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -53,11 +53,17 @@ export default function DocsIndexPage({
             <Link href="/paths" className="btn btn-secondary">
               Reading lists
             </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask AI
+            </Link>
             <Link href="/templates" className="btn btn-secondary">
               Templates
             </Link>
             <Link href="/blocks" className="btn btn-secondary">
               Reusable text
+            </Link>
+            <Link href="/help" className="btn btn-secondary">
+              Help
             </Link>
           </nav>
         </div>

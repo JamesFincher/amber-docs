@@ -772,7 +772,7 @@ export function StudioClient() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -861,7 +861,7 @@ export function StudioClient() {
         <label className="mt-4 block">
           <div className="text-sm font-semibold text-zinc-800">Your name (optional)</div>
           <input
-            className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+            className="mt-2 w-full control"
             value={actorName}
             onChange={(e) => setActorName(e.target.value)}
             placeholder="Example: Jane Doe"
@@ -911,7 +911,7 @@ export function StudioClient() {
             <label className="block">
               <div className="text-sm font-semibold text-zinc-800">Title</div>
               <input
-                className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                className="mt-2 w-full control"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="Example: Treasury Strategy Q3"
@@ -920,7 +920,7 @@ export function StudioClient() {
             <label className="block">
               <div className="text-sm font-semibold text-zinc-800">Slug (URL name)</div>
               <input
-                className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                className="mt-2 w-full control"
                 value={newSlug}
                 onChange={(e) => setNewSlug(e.target.value)}
                 placeholder="example: treasury-strategy-q3"
@@ -929,7 +929,7 @@ export function StudioClient() {
             <label className="block">
               <div className="text-sm font-semibold text-zinc-800">Summary (1 sentence)</div>
               <input
-                className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                className="mt-2 w-full control"
                 value={newSummary}
                 onChange={(e) => setNewSummary(e.target.value)}
                 placeholder="What is this doc for?"
@@ -938,7 +938,7 @@ export function StudioClient() {
             <label className="block">
               <div className="text-sm font-semibold text-zinc-800">Document type</div>
               <select
-                className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                className="mt-2 w-full control"
                 value={newDocType}
                 onChange={(e) => setNewDocType(e.target.value)}
               >
@@ -956,7 +956,7 @@ export function StudioClient() {
               <label className="block">
                 <div className="text-sm font-semibold text-zinc-800">Status</div>
                 <select
-                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  className="mt-2 w-full control"
                   value={newStage}
                   onChange={(e) => setNewStage(e.target.value as DocStage)}
                 >
@@ -968,7 +968,7 @@ export function StudioClient() {
               <label className="block">
                 <div className="text-sm font-semibold text-zinc-800">Version (usually a date)</div>
                 <input
-                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  className="mt-2 w-full control"
                   value={newVersion}
                   onChange={(e) => setNewVersion(e.target.value)}
                   placeholder="YYYY-MM-DD"
@@ -983,7 +983,7 @@ export function StudioClient() {
                 <label className="block">
                   <div className="text-sm font-semibold text-zinc-800">Owners (comma separated)</div>
                   <input
-                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                    className="mt-2 w-full control"
                     value={newOwners}
                     onChange={(e) => setNewOwners(e.target.value)}
                     placeholder="Example: Docs Maintainer, Ops Lead"
@@ -992,7 +992,7 @@ export function StudioClient() {
                 <label className="block">
                   <div className="text-sm font-semibold text-zinc-800">Topics (comma separated)</div>
                   <input
-                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                    className="mt-2 w-full control"
                     value={newTopics}
                     onChange={(e) => setNewTopics(e.target.value)}
                     placeholder="Example: treasury, governance"
@@ -1005,7 +1005,7 @@ export function StudioClient() {
                   <label className="block">
                     <div className="text-sm font-semibold text-zinc-800">Reading list (optional)</div>
                     <input
-                      className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                      className="mt-2 w-full control"
                       value={newCollection}
                       onChange={(e) => setNewCollection(e.target.value)}
                       placeholder="Example: Treasury onboarding"
@@ -1014,7 +1014,7 @@ export function StudioClient() {
                   <label className="block">
                     <div className="text-sm font-semibold text-zinc-800">Reading list order (optional)</div>
                     <input
-                      className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                      className="mt-2 w-full control"
                       value={newOrder}
                       onChange={(e) => setNewOrder(e.target.value)}
                       placeholder="Example: 1"
@@ -1025,7 +1025,7 @@ export function StudioClient() {
                 <label className="block">
                   <div className="text-sm font-semibold text-zinc-800">Visibility</div>
                   <select
-                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                    className="mt-2 w-full control"
                     value={newVisibility}
                     onChange={(e) => setNewVisibility(e.target.value as DocVisibility)}
                   >
@@ -1102,7 +1102,7 @@ export function StudioClient() {
           <label className="mt-4 block">
             <div className="text-sm font-semibold text-zinc-800">Choose a document</div>
             <select
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
               value={selectedFile}
               onChange={(e) => setSelectedFile(e.target.value)}
               disabled={!dirHandle || busy}
@@ -1153,7 +1153,7 @@ export function StudioClient() {
                   <label className="block">
                     <div className="text-sm font-semibold text-zinc-800">Title</div>
                     <input
-                      className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                      className="mt-2 w-full control"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                     />
@@ -1162,7 +1162,7 @@ export function StudioClient() {
                   <label className="block">
                     <div className="text-sm font-semibold text-zinc-800">Summary</div>
                     <input
-                      className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                      className="mt-2 w-full control"
                       value={editSummary}
                       onChange={(e) => setEditSummary(e.target.value)}
                     />
@@ -1172,7 +1172,7 @@ export function StudioClient() {
                     <label className="block">
                       <div className="text-sm font-semibold text-zinc-800">Status</div>
                       <select
-                        className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                        className="mt-2 w-full control"
                         value={editStage}
                         onChange={(e) => setEditStage(e.target.value as DocStage)}
                       >
@@ -1185,7 +1185,7 @@ export function StudioClient() {
                     <label className="block">
                       <div className="text-sm font-semibold text-zinc-800">Published?</div>
                       <select
-                        className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                        className="mt-2 w-full control"
                         value={editArchived ? "no" : "yes"}
                         onChange={(e) => setEditArchived(e.target.value !== "yes")}
                       >
@@ -1197,7 +1197,7 @@ export function StudioClient() {
                     <label className="block">
                       <div className="text-sm font-semibold text-zinc-800">Visibility</div>
                       <select
-                        className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                        className="mt-2 w-full control"
                         value={editVisibility}
                         onChange={(e) => setEditVisibility(e.target.value as DocVisibility)}
                       >
@@ -1212,7 +1212,7 @@ export function StudioClient() {
                     <label className="block">
                       <div className="text-sm font-semibold text-zinc-800">Updated date</div>
                       <input
-                        className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                        className="mt-2 w-full control"
                         value={editUpdatedAt}
                         onChange={(e) => setEditUpdatedAt(e.target.value)}
                         placeholder="YYYY-MM-DD"
@@ -1221,7 +1221,7 @@ export function StudioClient() {
                     <label className="block">
                       <div className="text-sm font-semibold text-zinc-800">Last reviewed date (official)</div>
                       <input
-                        className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                        className="mt-2 w-full control"
                         value={editLastReviewedAt}
                         onChange={(e) => setEditLastReviewedAt(e.target.value)}
                         placeholder="YYYY-MM-DD"
@@ -1232,7 +1232,7 @@ export function StudioClient() {
                   <label className="block">
                     <div className="text-sm font-semibold text-zinc-800">Owners (comma separated)</div>
                     <input
-                      className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                      className="mt-2 w-full control"
                       value={editOwners}
                       onChange={(e) => setEditOwners(e.target.value)}
                       placeholder="Example: Docs Maintainer, Protocol Lead"
@@ -1242,7 +1242,7 @@ export function StudioClient() {
                   <label className="block">
                     <div className="text-sm font-semibold text-zinc-800">Topics (comma separated)</div>
                     <input
-                      className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                      className="mt-2 w-full control"
                       value={editTopics}
                       onChange={(e) => setEditTopics(e.target.value)}
                       placeholder="Example: process, governance"
@@ -1253,7 +1253,7 @@ export function StudioClient() {
                     <label className="block">
                       <div className="text-sm font-semibold text-zinc-800">Reading list (optional)</div>
                       <input
-                        className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                        className="mt-2 w-full control"
                         value={editCollection}
                         onChange={(e) => setEditCollection(e.target.value)}
                         placeholder="Example: Treasury onboarding"
@@ -1262,7 +1262,7 @@ export function StudioClient() {
                     <label className="block">
                       <div className="text-sm font-semibold text-zinc-800">Reading list order (optional)</div>
                       <input
-                        className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                        className="mt-2 w-full control"
                         value={editOrder}
                         onChange={(e) => setEditOrder(e.target.value)}
                         placeholder="Example: 1"
@@ -1290,7 +1290,7 @@ export function StudioClient() {
                                 <label className="block md:col-span-2">
                                   <div className="text-sm font-semibold text-zinc-800">Label</div>
                                   <input
-                                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                                    className="mt-2 w-full control"
                                     value={c.label}
                                     onChange={(e) =>
                                       setEditCitations((prev) => prev.map((x, i) => (i === idx ? { ...x, label: e.target.value } : x)))
@@ -1301,7 +1301,7 @@ export function StudioClient() {
                                 <label className="block md:col-span-3">
                                   <div className="text-sm font-semibold text-zinc-800">URL (optional)</div>
                                   <input
-                                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                                    className="mt-2 w-full control"
                                     value={c.url}
                                     onChange={(e) =>
                                       setEditCitations((prev) => prev.map((x, i) => (i === idx ? { ...x, url: e.target.value } : x)))
@@ -1341,7 +1341,7 @@ export function StudioClient() {
                                 <label className="block md:col-span-3">
                                   <div className="text-sm font-semibold text-zinc-800">Name</div>
                                   <input
-                                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                                    className="mt-2 w-full control"
                                     value={a.name}
                                     onChange={(e) =>
                                       setEditApprovals((prev) => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))
@@ -1353,7 +1353,7 @@ export function StudioClient() {
                                 <label className="block md:col-span-2">
                                   <div className="text-sm font-semibold text-zinc-800">Date</div>
                                   <input
-                                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                                    className="mt-2 w-full control"
                                     value={a.date}
                                     onChange={(e) =>
                                       setEditApprovals((prev) => prev.map((x, i) => (i === idx ? { ...x, date: e.target.value } : x)))

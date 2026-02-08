@@ -1191,7 +1191,7 @@ Output JSON only.`;
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1227,7 +1227,7 @@ Output JSON only.`;
           <label className="block">
             <div className="text-sm font-semibold text-zinc-800">Gemini API key</div>
             <input
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Paste your key here"
@@ -1239,7 +1239,7 @@ Output JSON only.`;
           <label className="block">
             <div className="text-sm font-semibold text-zinc-800">Model</div>
             <input
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="Example: gemini-2.0-flash"
@@ -1425,7 +1425,7 @@ Output JSON only.`;
         <label className="mt-5 block">
           <div className="text-sm font-semibold text-zinc-800">Your message</div>
           <textarea
-            className="mt-2 h-28 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+            className="mt-2 h-28 w-full control"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Example: Find the right doc for publishing. Then draft a new policy doc and save it."

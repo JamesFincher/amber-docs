@@ -105,7 +105,7 @@ export function NotesPanel(props: { doc: { slug: string; version: string; toc: T
         <label className="text-sm font-semibold text-zinc-800">
           Section
           <select
-            className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+            className="mt-2 w-full control"
             value={sectionId}
             onChange={(e) => setSectionId(e.target.value)}
           >
@@ -119,7 +119,7 @@ export function NotesPanel(props: { doc: { slug: string; version: string; toc: T
         <label className="block">
           <div className="text-sm font-semibold text-zinc-800">Note</div>
           <textarea
-            className="mt-2 h-28 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+            className="mt-2 h-28 w-full control"
             placeholder="Add a note (what to verify, what changed, open questions)."
             value={body}
             onChange={(e) => setBody(e.target.value)}

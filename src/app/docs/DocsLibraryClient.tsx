@@ -372,8 +372,11 @@ export function DocsLibraryClient({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              type="search"
+              enterKeyHint="search"
+              autoComplete="off"
               placeholder="Example: approvals, treasury, runbook"
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base outline-none focus:ring-4 focus:ring-black/10"
+              className="mt-2 w-full control"
             />
           </label>
 
@@ -382,7 +385,7 @@ export function DocsLibraryClient({
             <select
               value={stage}
               onChange={(e) => setStage(e.target.value as StageFilter)}
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
             >
               <option value="all">All statuses</option>
               <option value="official">Official (published)</option>
@@ -396,7 +399,7 @@ export function DocsLibraryClient({
             <select
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
             >
               {topics.map((t) => (
                 <option key={t} value={t}>
@@ -411,7 +414,7 @@ export function DocsLibraryClient({
             <select
               value={collection}
               onChange={(e) => setCollection(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
             >
               {collections.map((c) => (
                 <option key={c} value={c}>

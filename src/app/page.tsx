@@ -7,7 +7,7 @@ export default function Home() {
   const collections = listCollections().slice(0, 6);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+    <main className="page max-w-7xl">
       <section className="grid gap-8 lg:grid-cols-12">
         <div className="lg:col-span-7">
           <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-zinc-800">
@@ -24,6 +24,9 @@ export default function Home() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/docs" className="btn btn-primary">
               Find a document
+            </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask Amber AI
             </Link>
             <Link href="/studio" className="btn btn-secondary">
               Write + publish
@@ -42,6 +45,9 @@ export default function Home() {
             <div className="mt-4 flex flex-wrap gap-3">
               <Link href="/help" className="btn btn-primary">
                 Open Help
+              </Link>
+              <Link href="/assistant" className="btn btn-secondary">
+                Ask Amber AI
               </Link>
               <Link href="/paths" className="btn btn-secondary">
                 Browse reading lists
@@ -80,19 +86,19 @@ export default function Home() {
               These endpoints are mainly for integrations and automation. You can ignore them if you just want to read and write docs.
             </p>
             <div className="mt-4 grid gap-3">
-              <a href="/docs.json" className="rounded-xl border border-black/10 bg-white p-4 hover:bg-zinc-50">
+              <a href="/docs.json" className="rounded-2xl border border-black/10 bg-white/80 p-4 hover:bg-white">
                 <div className="font-semibold text-zinc-900">docs.json</div>
                 <div className="mt-1 text-sm text-zinc-700">All doc versions + latest aliases.</div>
               </a>
-              <a href="/search-index.json" className="rounded-xl border border-black/10 bg-white p-4 hover:bg-zinc-50">
+              <a href="/search-index.json" className="rounded-2xl border border-black/10 bg-white/80 p-4 hover:bg-white">
                 <div className="font-semibold text-zinc-900">search-index.json</div>
                 <div className="mt-1 text-sm text-zinc-700">Search index used by the Documents page.</div>
               </a>
-              <a href="/chunks.json" className="rounded-xl border border-black/10 bg-white p-4 hover:bg-zinc-50">
+              <a href="/chunks.json" className="rounded-2xl border border-black/10 bg-white/80 p-4 hover:bg-white">
                 <div className="font-semibold text-zinc-900">chunks.json</div>
                 <div className="mt-1 text-sm text-zinc-700">Chunked export for RAG workflows.</div>
               </a>
-              <a href="/updates.json" className="rounded-xl border border-black/10 bg-white p-4 hover:bg-zinc-50">
+              <a href="/updates.json" className="rounded-2xl border border-black/10 bg-white/80 p-4 hover:bg-white">
                 <div className="font-semibold text-zinc-900">updates.json</div>
                 <div className="mt-1 text-sm text-zinc-700">Build ID + content hashes for polling.</div>
               </a>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listLatestDocs } from "@/lib/content/docs.server";
 
 export const metadata = {
-  title: "Help | Amber Protocol",
+  title: "Help | Amber Docs",
   description: "Simple, click-by-click help for using Amber Docs.",
 };
 
@@ -12,7 +12,7 @@ export default function HelpPage() {
   const exampleDiffUrl = first ? `/docs/${encodeURIComponent(first.slug)}/diff` : "/docs";
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <p className="text-sm font-semibold text-zinc-700">Help</p>
         <h1 className="font-display text-4xl font-semibold tracking-tight">How to use Amber Docs</h1>

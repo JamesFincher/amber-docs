@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-16">
+    <main className="page max-w-2xl py-16">
       <div className="card p-10">
         <p className="text-sm font-semibold text-zinc-700">404</p>
         <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-zinc-950">Not found</h1>
@@ -10,6 +10,9 @@ export default function NotFound() {
         <div className="mt-7 flex flex-wrap items-center gap-2">
           <Link href="/" className="btn btn-secondary">
             Home
+          </Link>
+          <Link href="/assistant" className="btn btn-secondary">
+            Ask AI
           </Link>
           <Link href="/docs" className="btn btn-primary">
             Open Documents

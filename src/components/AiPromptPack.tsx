@@ -98,12 +98,13 @@ export function AiPromptPack({ doc, relatedDocs }: { doc: DocRecord; relatedDocs
         If you use an AI tool, these prompts help with rewrites, claim extraction, and contradiction checks. You can ignore this section if you do not use AI.
       </p>
 
-      <details className="rounded-xl border border-zinc-200 bg-white p-4">
+      <details className="rounded-xl border border-zinc-200 bg-white/80 p-4">
         <summary className="cursor-pointer text-base font-semibold text-zinc-900">Full-doc review prompt</summary>
         <textarea
-          className="mt-3 h-56 w-full rounded-xl border border-zinc-300 bg-white p-4 font-mono text-sm text-zinc-900"
+          className="mt-3 h-56 w-full control font-mono text-sm text-zinc-900"
           value={docPrompt}
           readOnly
+          spellCheck={false}
         />
       </details>
 
@@ -117,7 +118,7 @@ export function AiPromptPack({ doc, relatedDocs }: { doc: DocRecord; relatedDocs
               relatedDocs,
             });
             return (
-              <details key={s.heading} className="rounded-xl border border-zinc-200 bg-white p-4">
+              <details key={s.heading} className="rounded-xl border border-zinc-200 bg-white/80 p-4">
                 <summary className="cursor-pointer text-base font-semibold text-zinc-900">
                   Section: {s.heading}
                 </summary>
@@ -126,9 +127,10 @@ export function AiPromptPack({ doc, relatedDocs }: { doc: DocRecord; relatedDocs
                   <CopyButton text={prompt} label="Copy section prompt" />
                 </div>
                 <textarea
-                  className="mt-3 h-44 w-full rounded-xl border border-zinc-300 bg-white p-4 font-mono text-sm text-zinc-900"
+                  className="mt-3 h-44 w-full control font-mono text-sm text-zinc-900"
                   value={prompt}
                   readOnly
+                  spellCheck={false}
                 />
               </details>
             );

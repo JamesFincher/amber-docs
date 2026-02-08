@@ -175,7 +175,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -213,8 +213,11 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              type="search"
+              enterKeyHint="search"
+              autoComplete="off"
               placeholder="Example: official, approval, disclaimer, definition"
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base outline-none focus:ring-4 focus:ring-black/10"
+              className="mt-2 w-full control"
             />
           </label>
 
@@ -223,7 +226,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
             <select
               value={tag}
               onChange={(e) => setTag(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              className="mt-2 w-full control"
             >
               {tags.map((t) => (
                 <option key={t} value={t}>
@@ -346,7 +349,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
               <label className="block">
                 <div className="text-sm font-semibold text-zinc-800">Title</div>
                 <input
-                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  className="mt-2 w-full control"
                   placeholder="Example: Legal disclaimer"
                   value={newSnippetTitle}
                   onChange={(e) => setNewSnippetTitle(e.target.value)}
@@ -355,7 +358,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
               <label className="block">
                 <div className="text-sm font-semibold text-zinc-800">Body</div>
                 <textarea
-                  className="mt-2 h-32 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  className="mt-2 h-32 w-full control"
                   placeholder="Write the disclaimer text here."
                   value={newSnippetBody}
                   onChange={(e) => setNewSnippetBody(e.target.value)}
@@ -364,7 +367,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
               <label className="block">
                 <div className="text-sm font-semibold text-zinc-800">Tags (comma separated)</div>
                 <input
-                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  className="mt-2 w-full control"
                   placeholder="Example: legal, public"
                   value={newSnippetTags}
                   onChange={(e) => setNewSnippetTags(e.target.value)}
@@ -464,7 +467,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
               <label className="block">
                 <div className="text-sm font-semibold text-zinc-800">Term</div>
                 <input
-                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  className="mt-2 w-full control"
                   placeholder="Example: Official"
                   value={newGlossaryTerm}
                   onChange={(e) => setNewGlossaryTerm(e.target.value)}
@@ -473,7 +476,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
               <label className="block">
                 <div className="text-sm font-semibold text-zinc-800">Definition</div>
                 <textarea
-                  className="mt-2 h-32 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  className="mt-2 h-32 w-full control"
                   placeholder="Write the definition here."
                   value={newGlossaryDefinition}
                   onChange={(e) => setNewGlossaryDefinition(e.target.value)}
@@ -482,7 +485,7 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
               <label className="block">
                 <div className="text-sm font-semibold text-zinc-800">Tags (comma separated)</div>
                 <input
-                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+                  className="mt-2 w-full control"
                   placeholder="Example: lifecycle, governance"
                   value={newGlossaryTags}
                   onChange={(e) => setNewGlossaryTags(e.target.value)}

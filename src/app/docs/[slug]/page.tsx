@@ -10,9 +10,9 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   const doc = getLatestDoc(params.slug);
-  if (!doc) return { title: "Doc Not Found | Amber Protocol" };
+  if (!doc) return { title: "Doc Not Found | Amber Docs" };
   return {
-    title: `${doc.title} | Amber Protocol`,
+    title: `${doc.title} | Amber Docs`,
     description: doc.summary,
   };
 }
@@ -33,4 +33,3 @@ export default function DocLatestPage({ params }: { params: { slug: string } }) 
     <DocDetail doc={doc} versions={versions} relatedDocs={related} prev={prev} next={next} isLatest />
   );
 }
-

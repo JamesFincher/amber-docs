@@ -3,7 +3,7 @@ import { listCollections } from "@/lib/content/docs.server";
 import { stageBadgeClass } from "@/lib/docs";
 
 export const metadata = {
-  title: "Reading lists | Amber Protocol",
+  title: "Reading lists | Amber Docs",
   description: "Recommended reading lists that group documents in a useful order.",
 };
 
@@ -15,7 +15,7 @@ export default function PathsPage() {
   const collections = listCollections();
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="page max-w-6xl">
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -25,6 +25,9 @@ export default function PathsPage() {
           <nav className="flex flex-wrap gap-2">
             <Link href="/docs" className="btn btn-secondary">
               Documents
+            </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask AI
             </Link>
             <Link href="/templates" className="btn btn-secondary">
               Templates

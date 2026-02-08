@@ -33,7 +33,7 @@ export function DocDetail(props: {
   const visibilityLabel = doc.visibility === "public" ? "Public" : doc.visibility === "internal" ? "Internal" : "Private";
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+    <main className="page max-w-7xl">
       <nav className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-700">
           <Link href="/" className="underline decoration-black/10 underline-offset-4 hover:decoration-black/30">

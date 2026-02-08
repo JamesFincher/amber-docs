@@ -9,7 +9,7 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   return {
-    title: `Compare versions | ${params.slug} | Amber Protocol`,
+    title: `Compare versions | ${params.slug} | Amber Docs`,
   };
 }
 
