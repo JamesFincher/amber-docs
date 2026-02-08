@@ -6,11 +6,10 @@ import type { DocTemplate } from "@/lib/templates";
 import { buildMarkdownSkeleton, buildPrompt, buildSectionPromptPack } from "@/lib/templates";
 import { CopyButton } from "@/components/CopyButton";
 import { geminiGenerateText } from "@/lib/ai/gemini";
+import { defaultGeminiModel, GEMINI_MODEL_PRESETS, readGeminiSettings, writeGeminiSettings } from "@/lib/ai/geminiSettings";
 import { saveStudioImport } from "@/lib/studioImport";
 
 const CUSTOM_KEY = "amber-docs:templates:custom:v1";
-const GEMINI_KEY = "amber-docs:ai:gemini:key:v1";
-const GEMINI_MODEL_KEY = "amber-docs:ai:gemini:model:v1";
 
 function uniqById(templates: DocTemplate[]): DocTemplate[] {
   const map = new Map<string, DocTemplate>();
@@ -80,7 +79,7 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
   const [enabledOptional, setEnabledOptional] = useState<Set<string>>(new Set());
   const [customJson, setCustomJson] = useState<string>("[]");
   const [geminiApiKey, setGeminiApiKey] = useState<string>("");
-  const [geminiModel, setGeminiModel] = useState<string>("gemini-2.0-flash");
+  const [geminiModel, setGeminiModel] = useState<string>(defaultGeminiModel());
   const [generated, setGenerated] = useState<string>("");
   const [genBusy, setGenBusy] = useState<boolean>(false);
   const [genError, setGenError] = useState<string | null>(null);
@@ -94,14 +93,9 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
   }, []);
 
   useEffect(() => {
-    try {
-      const key = localStorage.getItem(GEMINI_KEY);
-      const model = localStorage.getItem(GEMINI_MODEL_KEY);
-      if (key) setGeminiApiKey(key);
-      if (model) setGeminiModel(model);
-    } catch {
-      // ignore
-    }
+    const { apiKey, model } = readGeminiSettings();
+    if (apiKey) setGeminiApiKey(apiKey);
+    if (model) setGeminiModel(model);
   }, []);
 
   const allTemplates = useMemo(() => uniqById([...templates, ...custom]), [templates, custom]);
@@ -198,12 +192,7 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     setGenBusy(true);
     setGenError(null);
     try {
-      try {
-        localStorage.setItem(GEMINI_KEY, key);
-        localStorage.setItem(GEMINI_MODEL_KEY, model);
-      } catch {
-        // ignore
-      }
+      writeGeminiSettings({ apiKey: key, model });
 
       const prompt = `${promptOutput.trim()}\n\nOutput requirements:\n- Return only the final Markdown document.\n- Do not wrap it in code fences.\n`;
       const out = await geminiGenerateText({
@@ -507,11 +496,17 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
               className="mt-2 w-full control"
               value={geminiModel}
               onChange={(e) => setGeminiModel(e.target.value)}
-              placeholder="Example: gemini-2.0-flash"
+              placeholder={`Example: ${defaultGeminiModel()}`}
               autoComplete="off"
+              list="gemini-models"
             />
+            <datalist id="gemini-models">
+              {GEMINI_MODEL_PRESETS.map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
             <div className="mt-2 text-sm text-zinc-600">
-              Suggested: <span className="font-semibold">gemini-2.0-flash</span> for speed, or <span className="font-semibold">gemini-2.5-pro</span> for depth (if available).
+              Suggested: <span className="font-semibold">{defaultGeminiModel()}</span> for speed, or a Pro model for depth (if enabled for your key).
             </div>
           </label>
         </div>

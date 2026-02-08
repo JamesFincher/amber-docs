@@ -10,6 +10,13 @@ import { buildMarkdownSkeleton, buildPrompt } from "@/lib/templates";
 import type { Approval, Citation, DocStage, DocVisibility } from "@/lib/docs";
 import { isoDate, resolveVersionAndUpdatedAt, safeFilePart, suggestedDocFileName } from "@/lib/content/docsWorkflow.shared";
 import { geminiGenerateText } from "@/lib/ai/gemini";
+import {
+  defaultGeminiModel,
+  GEMINI_MODEL_PRESETS,
+  readGeminiSettings,
+  writeGeminiSettings,
+} from "@/lib/ai/geminiSettings";
+import { lintDraftDocText, type DraftLintIssue } from "@/lib/ai/draftLint";
 import { computeWriteReady, deletePolicy, officialPatch, stagePatch } from "@/lib/ai/workspacePolicy";
 import { diffTextPreview } from "@/lib/ai/textDiff";
 import { createWorkspaceBackup, listWorkspaceBackups, restoreWorkspaceBackup } from "@/lib/ai/workspaceBackups";
@@ -18,8 +25,6 @@ import { runAgentLoop } from "@/lib/ai/castleAgent";
 import { saveStudioImport } from "@/lib/studioImport";
 import { CopyButton } from "@/components/CopyButton";
 
-const GEMINI_KEY = "amber-docs:ai:gemini:key:v1";
-const GEMINI_MODEL_KEY = "amber-docs:ai:gemini:model:v1";
 const CUSTOM_TEMPLATES_KEY = "amber-docs:templates:custom:v1";
 const CUSTOM_SNIPPETS_KEY = "amber-docs:blocks:snippets:v1";
 const CUSTOM_GLOSSARY_KEY = "amber-docs:blocks:glossary:v1";
@@ -56,6 +61,12 @@ type IndexDoc = {
 };
 
 type SynonymsMap = Record<string, string[]>;
+
+type Attachment = {
+  name: string;
+  text: string;
+  truncated: boolean;
+};
 
 type FsWritableStream = {
   write(data: string): Promise<void>;
@@ -120,6 +131,15 @@ function downloadText(filename: string, text: string, mime = "text/plain") {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function formatAttachmentsForPrompt(attachments: Attachment[]): string {
+  if (!attachments.length) return "";
+  const blocks = attachments.slice(0, 3).map((a, idx) => {
+    const head = `Attachment ${idx + 1}: ${a.name}${a.truncated ? " (truncated)" : ""}`;
+    return `${head}\n\`\`\`text\n${a.text}\n\`\`\``;
+  });
+  return `\n\nATTACHMENTS (user-provided files; treat as source material):\n${blocks.join("\n\n")}\n`;
 }
 
 function isStage(v: unknown): v is DocStage {
@@ -409,7 +429,7 @@ export function AiAssistantClient({
   templates: DocTemplate[];
 }) {
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState("gemini-2.0-flash");
+  const [model, setModel] = useState(defaultGeminiModel());
 
   const [includeContext, setIncludeContext] = useState(true);
   const [includeBlocks, setIncludeBlocks] = useState(true);
@@ -452,6 +472,13 @@ export function AiAssistantClient({
   ]);
   const [input, setInput] = useState("");
   const [lastDraft, setLastDraft] = useState<{ docText: string } | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachmentsBusy, setAttachmentsBusy] = useState(false);
+  const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
+
+  const [draftLint, setDraftLint] = useState<{ ok: boolean; issues: DraftLintIssue[] } | null>(null);
+  const [draftFixBusy, setDraftFixBusy] = useState(false);
+  const [draftFixError, setDraftFixError] = useState<string | null>(null);
 
   useEffect(() => {
     workspaceDocsRef.current = workspaceDocs;
@@ -470,14 +497,19 @@ export function AiAssistantClient({
   }, [chunks]);
 
   useEffect(() => {
-    try {
-      const k = localStorage.getItem(GEMINI_KEY);
-      const m = localStorage.getItem(GEMINI_MODEL_KEY);
-      if (k) setApiKey(k);
-      if (m) setModel(m);
-    } catch {
-      // ignore
+    if (!lastDraft?.docText) {
+      setDraftLint(null);
+      setDraftFixError(null);
+      return;
     }
+    const r = lintDraftDocText(lastDraft.docText);
+    setDraftLint({ ok: r.ok, issues: r.issues });
+  }, [lastDraft?.docText]);
+
+  useEffect(() => {
+    const { apiKey, model } = readGeminiSettings();
+    if (apiKey) setApiKey(apiKey);
+    if (model) setModel(model);
   }, []);
 
   useEffect(() => {
@@ -764,6 +796,35 @@ Output JSON only.`;
     });
   }
 
+  async function onAddAttachments(fileList: FileList | null) {
+    const files = Array.from(fileList ?? []);
+    if (!files.length) return;
+    setAttachmentsError(null);
+    setAttachmentsBusy(true);
+    try {
+      const maxFiles = 3;
+      const maxCharsPerFile = 80_000;
+      const maxCharsTotal = 160_000;
+      let remaining = maxCharsTotal;
+
+      const out: Attachment[] = [];
+      for (const f of files.slice(0, maxFiles)) {
+        const raw = await f.text();
+        const slice = raw.slice(0, Math.min(maxCharsPerFile, remaining));
+        out.push({ name: f.name, text: slice, truncated: raw.length > slice.length });
+        remaining -= slice.length;
+        if (remaining <= 0) break;
+      }
+
+      setAttachments((prev) => [...prev, ...out].slice(0, maxFiles));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setAttachmentsError(msg);
+    } finally {
+      setAttachmentsBusy(false);
+    }
+  }
+
   async function onSend() {
     const k = apiKey.trim();
     const m = model.trim();
@@ -775,18 +836,15 @@ Output JSON only.`;
     setBusy(true);
     setError(null);
     setLastDraft(null);
+    setDraftFixError(null);
 
     try {
-      try {
-        localStorage.setItem(GEMINI_KEY, k);
-        localStorage.setItem(GEMINI_MODEL_KEY, m);
-      } catch {
-        // ignore
-      }
+      writeGeminiSettings({ apiKey: k, model: m });
 
-      const userItem: AgentTranscriptItem = { role: "user", content: text };
+      const userItem: AgentTranscriptItem = { role: "user", content: `${text}${formatAttachmentsForPrompt(attachments)}` };
       const base: AgentTranscriptItem[] = [...messages, userItem];
       setMessages(base);
+      setAttachments([]);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -1518,6 +1576,43 @@ Output JSON only.`;
     }
   }
 
+  async function onFixDraftWithAi() {
+    const draft = lastDraft?.docText ?? "";
+    if (!draft.trim()) return;
+    const lint = draftLint;
+    if (!lint || lint.ok) return;
+
+    const k = apiKey.trim();
+    const m = model.trim();
+    if (!k) return alert("Add your Gemini API key first.");
+    if (!m) return alert("Choose a model first.");
+
+    setDraftFixBusy(true);
+    setDraftFixError(null);
+    try {
+      writeGeminiSettings({ apiKey: k, model: m });
+
+      const checklist = lint.issues.map((i) => `- ${i.message}`).join("\n");
+      const prompt = `You are Amber AI. You are fixing a Markdown document file for the Amber Docs system.\n\nTask:\n- Fix the draft below so it passes the checklist.\n- Preserve the meaning and most of the content.\n\nChecklist:\n${checklist}\n\nOutput requirements:\n- Return ONLY the full updated document as Markdown.\n- Include YAML frontmatter at the top.\n- Do NOT wrap the output in code fences.\n\nCurrent draft:\n${draft}\n`;
+
+      const out = await geminiGenerateText({
+        apiKey: k,
+        model: m,
+        prompt,
+        temperature: 0.2,
+        maxOutputTokens: 4096,
+      });
+
+      const next = out.text.trimEnd() + "\n";
+      setLastDraft({ docText: next });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setDraftFixError(msg);
+    } finally {
+      setDraftFixBusy(false);
+    }
+  }
+
   function ensureWorkspaceWriteReadyUi(): FsDirectoryHandle {
     if (!dirHandle) throw new Error('No workspace folder connected. Click "Choose docs folder" first.');
     if (!allowFileWrites) throw new Error('File edits are disabled. Turn on "Allow file edits" first.');
@@ -1667,15 +1762,14 @@ Output JSON only.`;
               className="mt-2 w-full control"
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              placeholder="Example: gemini-2.0-flash"
+              placeholder={`Example: ${defaultGeminiModel()}`}
               autoComplete="off"
               list="gemini-models"
             />
             <datalist id="gemini-models">
-              <option value="gemini-2.0-flash" />
-              <option value="gemini-2.0-pro" />
-              <option value="gemini-1.5-flash" />
-              <option value="gemini-1.5-pro" />
+              {GEMINI_MODEL_PRESETS.map((m) => (
+                <option key={m} value={m} />
+              ))}
             </datalist>
             <div className="mt-2 text-sm text-zinc-600">Tip: Use the default unless you know you need a different model.</div>
           </label>
@@ -1983,8 +2077,65 @@ Output JSON only.`;
           />
         </label>
 
+        <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold text-zinc-900">Attachments (optional)</div>
+              <div className="text-sm text-zinc-600">Attach a Markdown/text file for the AI to use as context.</div>
+            </div>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={() => {
+                setAttachments([]);
+                setAttachmentsError(null);
+              }}
+              disabled={busy || attachmentsBusy || attachments.length === 0}
+            >
+              Clear attachments
+            </button>
+          </div>
+
+          <input
+            className="mt-3 w-full"
+            type="file"
+            multiple
+            accept=".md,.mdx,.txt,text/markdown,text/plain"
+            disabled={busy || attachmentsBusy}
+            onChange={(e) => {
+              const files = e.target.files;
+              // Allow re-selecting the same file after it has been processed.
+              e.currentTarget.value = "";
+              void onAddAttachments(files);
+            }}
+          />
+
+          {attachmentsBusy ? <div className="mt-2 text-sm text-zinc-700">Reading files…</div> : null}
+          {attachmentsError ? (
+            <div className="mt-2 text-sm text-rose-700">Could not read attachment: {attachmentsError}</div>
+          ) : null}
+
+          {attachments.length ? (
+            <ul className="mt-3 list-disc space-y-1 pl-6 text-sm text-zinc-700">
+              {attachments.map((a, idx) => (
+                <li key={`${a.name}-${idx}`} className="flex flex-wrap items-center justify-between gap-3">
+                  <span>
+                    <span className="font-semibold">{a.name}</span>
+                    {a.truncated ? <span className="text-zinc-500"> (truncated)</span> : null}
+                  </span>
+                  <button className="btn btn-secondary" type="button" onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}>
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="mt-3 text-sm text-zinc-700">No files attached.</div>
+          )}
+        </div>
+
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button className="btn btn-primary" type="button" onClick={onSend} disabled={busy || !input.trim()}>
+          <button className="btn btn-primary" type="button" onClick={onSend} disabled={busy || attachmentsBusy || !input.trim()}>
             {busy ? "Working..." : "Send"}
           </button>
           {busy ? (
@@ -2044,6 +2195,47 @@ Output JSON only.`;
             readOnly
             spellCheck={false}
           />
+
+          {draftLint ? (
+            <details className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4" open={!draftLint.ok}>
+              <summary className="cursor-pointer text-base font-semibold text-zinc-900">
+                Draft checks: {draftLint.ok ? "looks good" : `${draftLint.issues.length} issue${draftLint.issues.length === 1 ? "" : "s"}`}
+              </summary>
+              {draftLint.ok ? (
+                <div className="mt-2 text-sm text-zinc-700">
+                  This draft looks like a valid Amber doc file (frontmatter + structure).
+                </div>
+              ) : (
+                <div className="mt-3 grid gap-3">
+                  <ul className="list-disc space-y-1 pl-6 text-sm text-zinc-700">
+                    {draftLint.issues.map((i) => (
+                      <li key={i.code}>{i.message}</li>
+                    ))}
+                  </ul>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      className="btn btn-primary"
+                      type="button"
+                      onClick={onFixDraftWithAi}
+                      disabled={draftFixBusy}
+                    >
+                      {draftFixBusy ? "Fixing..." : "Fix draft with AI"}
+                    </button>
+                    <div className="text-sm text-zinc-600">
+                      This will rewrite the draft to address the checklist (no files are edited).
+                    </div>
+                  </div>
+                  {draftFixError ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+                      <div className="font-semibold">Fix failed</div>
+                      <div className="mt-1">{draftFixError}</div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </details>
+          ) : null}
+
           <div className="mt-3 text-sm text-zinc-600">
             Tip: You can connect a folder above and ask Amber AI to create or update the file directly (advanced).
           </div>
