@@ -21,6 +21,7 @@ export type DocRecord = {
   version: string;
   title: string;
   stage: DocStage;
+  archived: boolean;
   updatedAt: string;
   lastReviewedAt?: string;
   owners: string[];

@@ -5,8 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocTemplate } from "@/lib/templates";
 import { buildMarkdownSkeleton, buildPrompt, buildSectionPromptPack } from "@/lib/templates";
 import { CopyButton } from "@/components/CopyButton";
+import { geminiGenerateText } from "@/lib/ai/gemini";
 
 const CUSTOM_KEY = "amber-docs:templates:custom:v1";
+const GEMINI_KEY = "amber-docs:ai:gemini:key:v1";
+const GEMINI_MODEL_KEY = "amber-docs:ai:gemini:model:v1";
 
 function uniqById(templates: DocTemplate[]): DocTemplate[] {
   const map = new Map<string, DocTemplate>();
@@ -71,6 +74,11 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [enabledOptional, setEnabledOptional] = useState<Set<string>>(new Set());
   const [customJson, setCustomJson] = useState<string>("[]");
+  const [geminiApiKey, setGeminiApiKey] = useState<string>("");
+  const [geminiModel, setGeminiModel] = useState<string>("gemini-2.0-flash");
+  const [generated, setGenerated] = useState<string>("");
+  const [genBusy, setGenBusy] = useState<boolean>(false);
+  const [genError, setGenError] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -78,6 +86,17 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     const loaded = readCustomTemplates();
     setCustom(loaded);
     setCustomJson(JSON.stringify(loaded, null, 2));
+  }, []);
+
+  useEffect(() => {
+    try {
+      const key = localStorage.getItem(GEMINI_KEY);
+      const model = localStorage.getItem(GEMINI_MODEL_KEY);
+      if (key) setGeminiApiKey(key);
+      if (model) setGeminiModel(model);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const allTemplates = useMemo(() => uniqById([...templates, ...custom]), [templates, custom]);
@@ -128,6 +147,16 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     URL.revokeObjectURL(url);
   }
 
+  function downloadText(filename: string, text: string, mime = "text/plain") {
+    const blob = new Blob([text], { type: `${mime}; charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function onImportFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -153,6 +182,40 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     setCustom(parsed);
     writeCustomTemplates(parsed);
     alert("Saved custom templates locally.");
+  }
+
+  async function onGenerateWithGemini() {
+    const key = geminiApiKey.trim();
+    const model = geminiModel.trim();
+    if (!key) return alert("Add your Google AI (Gemini) API key first.");
+    if (!model) return alert("Choose a Gemini model first.");
+
+    setGenBusy(true);
+    setGenError(null);
+    try {
+      try {
+        localStorage.setItem(GEMINI_KEY, key);
+        localStorage.setItem(GEMINI_MODEL_KEY, model);
+      } catch {
+        // ignore
+      }
+
+      const prompt = `${promptOutput.trim()}\n\nOutput requirements:\n- Return only the final Markdown document.\n- Do not wrap it in code fences.\n`;
+      const out = await geminiGenerateText({
+        apiKey: key,
+        model,
+        prompt,
+        temperature: 0.4,
+        maxOutputTokens: 4096,
+      });
+      setGenerated(out.text.trimEnd() + "\n");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setGenError(msg);
+      setGenerated("");
+    } finally {
+      setGenBusy(false);
+    }
   }
 
   return (
@@ -359,6 +422,81 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
           <textarea
             className="h-72 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
             value={markdownOutput}
+            readOnly
+            spellCheck={false}
+          />
+        </div>
+      </section>
+
+      <section className="mt-8 card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl font-semibold">Step 4 (Optional): Generate with Google AI</h2>
+            <p className="mt-1 text-zinc-700">
+              This calls the Gemini API directly from your browser. Your API key is saved locally on this computer (in this browser) to avoid retyping.
+            </p>
+          </div>
+          <button className="btn btn-primary" type="button" onClick={onGenerateWithGemini} disabled={genBusy}>
+            {genBusy ? "Generating..." : "Generate Markdown"}
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <label className="block">
+            <div className="text-sm font-semibold text-zinc-800">Gemini API key</div>
+            <input
+              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              value={geminiApiKey}
+              onChange={(e) => setGeminiApiKey(e.target.value)}
+              placeholder="Paste your key here"
+              type="password"
+              autoComplete="off"
+            />
+            <div className="mt-2 text-sm text-zinc-600">
+              Tip: If you do not want it remembered, clear this field after you generate.
+            </div>
+          </label>
+
+          <label className="block">
+            <div className="text-sm font-semibold text-zinc-800">Model</div>
+            <input
+              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
+              value={geminiModel}
+              onChange={(e) => setGeminiModel(e.target.value)}
+              placeholder="Example: gemini-2.0-flash"
+              autoComplete="off"
+            />
+            <div className="mt-2 text-sm text-zinc-600">
+              Suggested: <span className="font-semibold">gemini-2.0-flash</span> for speed, or <span className="font-semibold">gemini-2.5-pro</span> for depth (if available).
+            </div>
+          </label>
+        </div>
+
+        {genError ? (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+            <div className="font-semibold">Generation failed</div>
+            <div className="mt-1">{genError}</div>
+          </div>
+        ) : null}
+
+        <div className="mt-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="font-display text-2xl font-semibold">Generated Markdown</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <CopyButton text={generated} label="Copy generated" />
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={!generated.trim()}
+                onClick={() => downloadText(`${topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "document"}.md`, generated, "text/markdown")}
+              >
+                Download .md
+              </button>
+            </div>
+          </div>
+          <textarea
+            className="h-80 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
+            value={generated}
             readOnly
             spellCheck={false}
           />

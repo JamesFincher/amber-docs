@@ -15,11 +15,15 @@ Goal: make every core feature usable by a non-technical 64-year-old who only kno
   - [ ] Compare two versions of a document.
   - [ ] Copy raw Markdown.
   - [ ] Use a template to generate an AI prompt + Markdown scaffold.
+  - [ ] Generate a draft with Gemini (Google AI) and download Markdown.
+  - [ ] Create a new doc file and publish/unpublish it (browser-only).
   - [ ] Copy a disclaimer/glossary entry from Blocks.
   - [ ] Leave feedback and a note (local).
 
 ## Global UI
 - [x] Add a visible "Help" entry in the main navigation.
+- [x] Add "Write + publish" in the main navigation.
+- [x] Add "Ask AI" in the main navigation.
 - [x] Add a "Skip to content" link for keyboard users.
 - [x] Increase base font sizes and reduce tiny text usage (`text-xs`).
 - [x] Improve contrast and remove readability-reducing glass/blur where possible.
@@ -51,7 +55,15 @@ Goal: make every core feature usable by a non-technical 64-year-old who only kno
 ## Templates (/templates)
 - [x] Turn into a 3-step flow: Pick template, Fill details, Copy outputs.
 - [x] Make outputs easier to copy/download and less code-editor-like by default.
+- [x] Add optional native generation with Google AI (Gemini).
 - [x] Hide custom JSON registry behind "Advanced".
+
+## Write + Publish (/studio)
+- [x] Add a click-by-click flow for connecting `content/docs` and creating files.
+- [x] Add publish/unpublish/finalize/official and delete/version actions (local folder access).
+
+## Ask AI (/assistant)
+- [x] Add a plain-language AI assistant that can include internal docs context (via `chunks.json`).
 
 ## Blocks (/blocks)
 - [x] Focus UI on "Search and Copy".

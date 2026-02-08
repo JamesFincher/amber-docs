@@ -5,7 +5,7 @@ import type { DocRecord } from "@/lib/docs";
 import { DocDetail } from "@/app/docs/_components/doc-detail";
 
 export function generateStaticParams() {
-  return loadAllDocs().map((d) => ({ slug: d.slug, version: d.version }));
+  return loadAllDocs().filter((d) => !d.archived).map((d) => ({ slug: d.slug, version: d.version }));
 }
 
 export function generateMetadata({ params }: { params: { slug: string; version: string } }): Metadata {
@@ -35,4 +35,3 @@ export default function DocVersionPage({ params }: { params: { slug: string; ver
     <DocDetail doc={doc} versions={versions} relatedDocs={related} prev={prev} next={next} isLatest={isLatest} />
   );
 }
-

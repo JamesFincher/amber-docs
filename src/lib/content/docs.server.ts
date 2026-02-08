@@ -21,6 +21,7 @@ const DocFrontmatterSchema = z.object({
   version: z.string().min(1).optional(),
   title: z.string().min(1),
   stage: z.enum(["draft", "final", "official"]) satisfies z.ZodType<DocStage>,
+  archived: z.boolean().optional(),
   summary: z.string().min(1),
   updatedAt: z.string().min(1),
   lastReviewedAt: z.string().min(1).optional(),
@@ -80,6 +81,7 @@ function parseDocFile(filePath: string): DocRecord {
       version,
       title: fm.title,
       stage: fm.stage,
+      archived: fm.archived ?? false,
       summary: fm.summary,
       updatedAt: fm.updatedAt,
       lastReviewedAt: fm.lastReviewedAt ?? null,
@@ -94,6 +96,7 @@ function parseDocFile(filePath: string): DocRecord {
     version,
     title: fm.title,
     stage: fm.stage,
+    archived: fm.archived ?? false,
     summary: fm.summary,
     updatedAt: fm.updatedAt,
     lastReviewedAt: fm.lastReviewedAt,
@@ -135,27 +138,39 @@ export function loadAllDocs(): DocRecord[] {
   return docs;
 }
 
-export function listDocSlugs(): string[] {
-  return Array.from(new Set(loadAllDocs().map((d) => d.slug))).sort((a, b) => a.localeCompare(b));
+export function resetDocsCache() {
+  _cache = null;
+  _cacheRoot = null;
 }
 
-export function listDocVersions(slug: string): DocRecord[] {
-  return loadAllDocs()
+type ListOptions = { includeArchived?: boolean };
+
+function visibleDocs(options: ListOptions = {}): DocRecord[] {
+  const all = loadAllDocs();
+  return options.includeArchived ? all : all.filter((d) => !d.archived);
+}
+
+export function listDocSlugs(options: ListOptions = {}): string[] {
+  return Array.from(new Set(visibleDocs(options).map((d) => d.slug))).sort((a, b) => a.localeCompare(b));
+}
+
+export function listDocVersions(slug: string, options: ListOptions = {}): DocRecord[] {
+  return visibleDocs(options)
     .filter((d) => d.slug === slug)
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : a.version.localeCompare(b.version)));
 }
 
-export function getDocVersion(slug: string, version: string): DocRecord | null {
-  return loadAllDocs().find((d) => d.slug === slug && d.version === version) ?? null;
+export function getDocVersion(slug: string, version: string, options: ListOptions = {}): DocRecord | null {
+  return visibleDocs(options).find((d) => d.slug === slug && d.version === version) ?? null;
 }
 
-export function getLatestDoc(slug: string): DocRecord | null {
-  return listDocVersions(slug)[0] ?? null;
+export function getLatestDoc(slug: string, options: ListOptions = {}): DocRecord | null {
+  return listDocVersions(slug, options)[0] ?? null;
 }
 
-export function listLatestDocs(): DocRecord[] {
-  return listDocSlugs()
-    .map((slug) => getLatestDoc(slug))
+export function listLatestDocs(options: ListOptions = {}): DocRecord[] {
+  return listDocSlugs(options)
+    .map((slug) => getLatestDoc(slug, options))
     .filter((d): d is DocRecord => !!d)
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : a.slug.localeCompare(b.slug)));
 }
@@ -165,8 +180,8 @@ export type Collection = {
   docs: DocRecord[];
 };
 
-export function listCollections(): Collection[] {
-  const latest = listLatestDocs();
+export function listCollections(options: ListOptions = {}): Collection[] {
+  const latest = listLatestDocs(options);
   const map = new Map<string, DocRecord[]>();
   for (const d of latest) {
     const key = d.collection?.trim() || "Uncategorized";

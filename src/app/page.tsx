@@ -25,8 +25,8 @@ export default function Home() {
             <Link href="/docs" className="btn btn-primary">
               Find a document
             </Link>
-            <Link href="/templates" className="btn btn-secondary">
-              Write using a template
+            <Link href="/studio" className="btn btn-secondary">
+              Write + publish
             </Link>
             <Link href="/blocks" className="btn btn-secondary">
               Copy reusable text

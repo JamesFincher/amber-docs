@@ -19,6 +19,12 @@ export function SiteHeader() {
             <Link href="/paths" className="btn btn-secondary">
               Reading lists
             </Link>
+            <Link href="/studio" className="btn btn-secondary">
+              Write + publish
+            </Link>
+            <Link href="/assistant" className="btn btn-secondary">
+              Ask AI
+            </Link>
             <Link href="/templates" className="btn btn-secondary">
               Templates
             </Link>

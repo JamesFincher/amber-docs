@@ -5,7 +5,7 @@ export const dynamic = "force-static";
 const SCHEMA_VERSION = 1;
 
 export function GET() {
-  const all = loadAllDocs();
+  const all = loadAllDocs().filter((d) => !d.archived);
   const slugs = listDocSlugs();
 
   const bySlug = slugs.map((slug) => {
@@ -17,24 +17,25 @@ export function GET() {
       summary: d.summary,
       updatedAt: d.updatedAt,
       lastReviewedAt: d.lastReviewedAt ?? null,
-      owners: d.owners ?? [],
-      topics: d.topics ?? [],
+      owners: d.owners,
+      topics: d.topics,
       collection: d.collection ?? null,
       order: d.order ?? null,
-      relatedSlugs: d.relatedSlugs ?? [],
-      citations: d.citations ?? [],
-      approvals: d.approvals ?? [],
+      relatedSlugs: d.relatedSlugs,
+      citations: d.citations,
+      approvals: d.approvals,
       contentHash: d.contentHash,
       url: `/docs/${encodeURIComponent(d.slug)}/v/${encodeURIComponent(d.version)}`,
       rawUrl: `/raw/v/${encodeURIComponent(d.slug)}/${encodeURIComponent(d.version)}`,
     }));
 
-    const latest = versions[0] ?? null;
+    // listDocSlugs() is derived from visible docs, so each slug has at least one visible version.
+    const latest = versions[0]!;
     return {
       slug,
-      latestVersion: latest?.version ?? null,
-      latestUrl: latest ? `/docs/${encodeURIComponent(slug)}` : null,
-      latestRawUrl: latest ? `/raw/${encodeURIComponent(slug)}` : null,
+      latestVersion: latest.version,
+      latestUrl: `/docs/${encodeURIComponent(slug)}`,
+      latestRawUrl: `/raw/${encodeURIComponent(slug)}`,
       versions,
     };
   });

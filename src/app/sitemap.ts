@@ -15,6 +15,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/docs`, changeFrequency: "daily", priority: 0.8 },
     { url: `${base}/paths`, changeFrequency: "weekly", priority: 0.65 },
+    { url: `${base}/studio`, changeFrequency: "weekly", priority: 0.65 },
+    { url: `${base}/assistant`, changeFrequency: "weekly", priority: 0.65 },
     { url: `${base}/templates`, changeFrequency: "weekly", priority: 0.6 },
     { url: `${base}/blocks`, changeFrequency: "weekly", priority: 0.55 },
     ...docs.map((doc) => ({
@@ -25,4 +27,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 }
-

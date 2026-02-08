@@ -197,4 +197,101 @@ describe("content QA (edge cases)", () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("ignores archived docs for structure/metadata gates", async () => {
+    const root = mkTmpDir();
+    try {
+      const contentDir = path.join(root, "content");
+      baseBlocks(contentDir);
+      fs.mkdirSync(path.join(root, "public"), { recursive: true });
+
+      // Visible doc is valid.
+      write(
+        path.join(contentDir, "docs", "a.md"),
+        `---\nslug: a\nversion: \"1\"\ntitle: A\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-01\"\n---\n\n# A\n\n## H2\nok\n`,
+      );
+
+      // Archived doc would be invalid if published (no summary, no H2), but should be ignored.
+      write(
+        path.join(contentDir, "docs", "b.md"),
+        `---\nslug: b\nversion: \"1\"\ntitle: B\nstage: draft\narchived: true\nsummary: s\nupdatedAt: \"2026-01-01\"\n---\n\n# B\n\nNo H2.\n`,
+      );
+
+      const r = await runQa(root, contentDir);
+      expect(r.ok).toBe(true);
+      expect(r.failures).toHaveLength(0);
+      expect(r.docsCount).toBe(1);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("fails when a visible doc links to an archived doc", async () => {
+    const root = mkTmpDir();
+    try {
+      const contentDir = path.join(root, "content");
+      baseBlocks(contentDir);
+      fs.mkdirSync(path.join(root, "public"), { recursive: true });
+
+      write(
+        path.join(contentDir, "docs", "a.md"),
+        `---\nslug: a\nversion: \"1\"\ntitle: A\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-01\"\n---\n\n# A\n\n## H2\nSee [b](/docs/b).\n`,
+      );
+
+      write(
+        path.join(contentDir, "docs", "b.md"),
+        `---\nslug: b\nversion: \"1\"\ntitle: B\nstage: draft\narchived: true\nsummary: s\nupdatedAt: \"2026-01-01\"\n---\n\n# B\n\n## H2\nhidden\n`,
+      );
+
+      const r = await runQa(root, contentDir);
+      expect(r.ok).toBe(false);
+      expect(r.failures.map((f) => f.code)).toContain("broken_internal_link");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("fails on bad relatedSlugs entries that do not exist", async () => {
+    const root = mkTmpDir();
+    try {
+      const contentDir = path.join(root, "content");
+      baseBlocks(contentDir);
+      fs.mkdirSync(path.join(root, "public"), { recursive: true });
+
+      write(
+        path.join(contentDir, "docs", "a.md"),
+        `---\nslug: a\nversion: \"1\"\ntitle: A\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-01\"\nrelatedSlugs: [\"missing\"]\n---\n\n# A\n\n## H2\nok\n`,
+      );
+
+      const r = await runQa(root, contentDir);
+      expect(r.ok).toBe(false);
+      expect(r.failures.map((f) => f.code)).toContain("bad_related_slug");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("restores AMBER_DOCS_CONTENT_DIR when contentDir option overrides it", async () => {
+    const root = mkTmpDir();
+    const prev = process.env.AMBER_DOCS_CONTENT_DIR;
+    try {
+      process.env.AMBER_DOCS_CONTENT_DIR = "/tmp/previous-content-dir";
+
+      const contentDir = path.join(root, "content");
+      baseBlocks(contentDir);
+      fs.mkdirSync(path.join(root, "public"), { recursive: true });
+      write(
+        path.join(contentDir, "docs", "a.md"),
+        `---\nslug: a\nversion: \"1\"\ntitle: A\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-01\"\n---\n\n# A\n\n## H2\nok\n`,
+      );
+
+      const r = await runQa(root, contentDir);
+      expect(r.ok).toBe(true);
+      expect(process.env.AMBER_DOCS_CONTENT_DIR).toBe("/tmp/previous-content-dir");
+    } finally {
+      if (prev === undefined) delete process.env.AMBER_DOCS_CONTENT_DIR;
+      else process.env.AMBER_DOCS_CONTENT_DIR = prev;
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

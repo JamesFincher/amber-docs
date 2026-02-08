@@ -64,6 +64,30 @@ describe("scripts (import-safe wrappers)", () => {
     }
   });
 
+  test("scripts/content-qa logs success on clean content", async () => {
+    const root = mkTmpDir();
+    try {
+      process.exitCode = undefined;
+      process.env.AMBER_DOCS_CONTENT_DIR = path.join(root, "content");
+      baseContent(process.env.AMBER_DOCS_CONTENT_DIR);
+      write(
+        path.join(process.env.AMBER_DOCS_CONTENT_DIR, "docs", "a.md"),
+        `---\nslug: a\nversion: \"1\"\ntitle: A\nstage: draft\nsummary: s\nupdatedAt: \"2026-01-01\"\n---\n\n# A\n\n## H2\nok\n`,
+      );
+
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const { main } = await import("../scripts/content-qa");
+      await main();
+      expect(process.exitCode).toBeUndefined();
+      expect(err).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalled();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("scripts/send-webhook posts and does not set exitCode on success", async () => {
     const root = mkTmpDir();
     try {
@@ -91,6 +115,195 @@ describe("scripts (import-safe wrappers)", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(process.exitCode).toBeUndefined();
       expect(log).toHaveBeenCalled();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("scripts/docs-workflow new creates an unpublished doc file", async () => {
+    const root = mkTmpDir();
+    try {
+      process.exitCode = undefined;
+      process.env.AMBER_DOCS_CONTENT_DIR = path.join(root, "content");
+
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const { main } = await import("../scripts/docs-workflow");
+      await main([
+        "new",
+        "--slug",
+        "a",
+        "--title",
+        "A",
+        "--summary",
+        "s",
+        "--updated-at",
+        "2026-01-01",
+      ]);
+
+      expect(process.exitCode).toBeUndefined();
+      expect(err).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalled();
+
+      const created = path.join(process.env.AMBER_DOCS_CONTENT_DIR, "docs", "a--2026-01-01.md");
+      expect(fs.existsSync(created)).toBe(true);
+      const body = fs.readFileSync(created, "utf8");
+      expect(body).toContain("archived: true");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("scripts/docs-workflow supports publish, stage changes, clone, update, and deletes", async () => {
+    const root = mkTmpDir();
+    try {
+      process.env.AMBER_DOCS_CONTENT_DIR = path.join(root, "content");
+      process.exitCode = undefined;
+
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const { main } = await import("../scripts/docs-workflow");
+
+      // Create (unpublished by default).
+      await main(["new", "--slug=a", "--title=A", "--summary=s", "--updated-at=2026-01-01"]);
+      expect(err).not.toHaveBeenCalled();
+      expect(process.exitCode).toBeUndefined();
+
+      const file = path.join(process.env.AMBER_DOCS_CONTENT_DIR, "docs", "a--2026-01-01.md");
+      expect(fs.existsSync(file)).toBe(true);
+
+      // Publish.
+      await main(["publish", "--slug", "a", "--version", "2026-01-01"]);
+      expect(fs.readFileSync(file, "utf8")).toContain("archived: false");
+
+      // Finalize and then Official (with reviewedAt).
+      await main(["finalize", "--slug", "a", "--version", "2026-01-01"]);
+      expect(fs.readFileSync(file, "utf8")).toContain("stage: final");
+
+      await main([
+        "official",
+        "--slug",
+        "a",
+        "--version",
+        "2026-01-01",
+        "--reviewed-at",
+        "2026-01-02",
+        "--approvals",
+        "alice:2026-01-02",
+      ]);
+      const afterOfficial = fs.readFileSync(file, "utf8");
+      expect(afterOfficial).toContain("stage: official");
+      expect(afterOfficial).toMatch(/lastReviewedAt:\s+['"]?2026-01-02['"]?/);
+
+      // Update summary + lists and explicitly unpublish via --published=false.
+      await main([
+        "update",
+        "--slug",
+        "a",
+        "--version",
+        "2026-01-01",
+        "--summary",
+        "s2",
+        "--owners",
+        "bob",
+        "--topics",
+        "t1,t2",
+        "--published",
+        "false",
+      ]);
+      const afterUpdate = fs.readFileSync(file, "utf8");
+      expect(afterUpdate).toContain("summary: s2");
+      expect(afterUpdate).toContain("archived: true");
+      expect(afterUpdate).toContain("- bob");
+      expect(afterUpdate).toContain("- t1");
+
+      // Clone and delete.
+      await main(["clone", "--slug", "a", "--new-version", "2026-01-03", "--from-archived"]);
+      const cloneFile = path.join(process.env.AMBER_DOCS_CONTENT_DIR, "docs", "a--2026-01-03.md");
+      expect(fs.existsSync(cloneFile)).toBe(true);
+
+      await main(["delete", "--slug", "a", "--version", "2026-01-03"]);
+      expect(fs.existsSync(cloneFile)).toBe(false);
+
+      await main(["delete-all", "--slug", "a"]);
+      expect(fs.existsSync(file)).toBe(false);
+
+      // Unknown command should set exit code (and print usage).
+      process.exitCode = undefined;
+      await main(["nope"]);
+      expect(process.exitCode).toBe(1);
+      expect(log).toHaveBeenCalled();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("scripts/docs-workflow covers edge-case parsing and error handling", async () => {
+    const root = mkTmpDir();
+    try {
+      process.env.AMBER_DOCS_CONTENT_DIR = path.join(root, "content");
+      process.exitCode = undefined;
+
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const { main } = await import("../scripts/docs-workflow");
+
+      // Usage (no args).
+      await main([]);
+      expect(log).toHaveBeenCalled();
+      expect(process.exitCode).toBeUndefined();
+
+      // Missing required flags triggers an error path.
+      process.exitCode = undefined;
+      await main(["new"]);
+      expect(process.exitCode).toBe(1);
+      expect(err).toHaveBeenCalled();
+
+      // Create a doc so we can hit update/archiving branches.
+      process.exitCode = undefined;
+      await main(["new", "--slug", "a", "--title", "A", "--summary", "s", "--updated-at", "2026-01-01"]);
+      await main(["publish", "--slug", "a", "--version", "2026-01-01"]);
+
+      const file = path.join(process.env.AMBER_DOCS_CONTENT_DIR, "docs", "a--2026-01-01.md");
+      const mdFile = path.join(root, "patch.md");
+      write(mdFile, "# Patched\n\n## H2\nok\n");
+
+      // --markdown-file branch + --archived boolean flag branch.
+      await main(["update", "--slug", "a", "--version", "2026-01-01", "--archived", "--markdown-file", mdFile]);
+      const updated = fs.readFileSync(file, "utf8");
+      expect(updated).toContain("archived: true");
+      expect(updated).toContain("# Patched");
+
+      // --published boolean flag branch.
+      await main(["update", "--slug", "a", "--version", "2026-01-01", "--published"]);
+      expect(fs.readFileSync(file, "utf8")).toContain("archived: false");
+
+      // archive alias (unpublish).
+      await main(["archive", "--slug", "a", "--version", "2026-01-01"]);
+      expect(fs.readFileSync(file, "utf8")).toContain("archived: true");
+
+      // Invalid stage and invalid order both surface helpful errors.
+      process.exitCode = undefined;
+      await main(["update", "--slug", "a", "--version", "2026-01-01", "--stage", "nope"]);
+      expect(process.exitCode).toBe(1);
+
+      // Valid order assignment hits the happy path.
+      process.exitCode = undefined;
+      await main(["update", "--slug", "a", "--version", "2026-01-01", "--order", "2"]);
+      expect(process.exitCode).toBeUndefined();
+      expect(fs.readFileSync(file, "utf8")).toContain("order: 2");
+
+      process.exitCode = undefined;
+      await main(["update", "--slug", "a", "--version", "2026-01-01", "--order", "0"]);
+      expect(process.exitCode).toBe(1);
+
+      // Invalid boolean values are rejected.
+      process.exitCode = undefined;
+      await main(["update", "--slug", "a", "--version", "2026-01-01", "--archived", "wat"]);
+      expect(process.exitCode).toBe(1);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

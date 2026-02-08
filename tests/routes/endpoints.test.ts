@@ -88,6 +88,8 @@ describe("machine endpoints (route handlers)", () => {
       process.env.AMBER_DOCS_CONTENT_DIR = contentDir;
 
       const rawLatest = await import("../../src/app/raw/[slug]/route");
+      const paramsLatest = rawLatest.generateStaticParams();
+      expect(paramsLatest.some((p) => p.slug === "a")).toBe(true);
       const req = {} as unknown as import("next/server").NextRequest;
       const ok = await rawLatest.GET(req, { params: Promise.resolve({ slug: "a" }) });
       expect(ok.status).toBe(200);
@@ -97,9 +99,14 @@ describe("machine endpoints (route handlers)", () => {
       expect(miss.status).toBe(404);
 
       const rawPinned = await import("../../src/app/raw/v/[slug]/[version]/route");
+      const paramsPinned = rawPinned.generateStaticParams();
+      expect(paramsPinned.some((p) => p.slug === "a" && p.version === "1")).toBe(true);
       const ok2 = await rawPinned.GET(req, { params: Promise.resolve({ slug: "a", version: "1" }) });
       expect(ok2.status).toBe(200);
       expect(await ok2.text()).toContain("## Alpha");
+
+      const miss2 = await rawPinned.GET(req, { params: Promise.resolve({ slug: "a", version: "999" }) });
+      expect(miss2.status).toBe(404);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

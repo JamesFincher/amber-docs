@@ -25,7 +25,10 @@ This checklist tracks implementation of the features described in `PRODUCT_MINDM
 - [x] Template outputs: markdown scaffold
 - [x] Template outputs: section-by-section prompt pack (rewrite/fact-check/consistency)
 - [x] Copy buttons for template outputs
+- [x] Native generation with Google AI (Gemini) on Templates page
 - [x] Reusable snippet library page (`/blocks`) with disclaimers/glossary stubs
+- [x] Write + publish UI (`/studio`) for file creation/editing and lifecycle operations
+- [x] Doc workflow CLI scripts (`pnpm docs:*`) for create/clone/update/publish/unpublish/finalize/official/delete
 
 ## Review + Trust
 - [x] Doc-level AI checks displayed
@@ -36,6 +39,7 @@ This checklist tracks implementation of the features described in `PRODUCT_MINDM
 - [x] Content QA script: internal link validation
 - [x] Content QA script: required metadata rules by stage
 - [x] Content QA script: heading structure sanity checks
+- [x] Unpublished (archived) docs ignored by QA and excluded app-wide
 - [x] Wire QA into `pnpm build`
 - [x] CI passes: `pnpm lint`, `pnpm typecheck`, `pnpm build`
 

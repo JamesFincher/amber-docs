@@ -4,7 +4,7 @@ import { getDocVersion, loadAllDocs } from "@/lib/content/docs.server";
 export const dynamic = "force-static";
 
 export function generateStaticParams() {
-  return loadAllDocs().map((d) => ({ slug: d.slug, version: d.version }));
+  return loadAllDocs().filter((d) => !d.archived).map((d) => ({ slug: d.slug, version: d.version }));
 }
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ slug: string; version: string }> }) {
@@ -20,4 +20,3 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ sl
     },
   });
 }
-

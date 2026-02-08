@@ -10,6 +10,8 @@ Public documentation workspace for Amber Protocol, designed for human readers an
 - `/docs/[slug]/v/[version]` — Pinned historical doc version
 - `/docs/[slug]/diff` — Diff viewer between doc versions
 - `/paths` — Collections + recommended reading paths (breadcrumbs + prev/next)
+- `/studio` — Write + publish (create/edit/publish/unpublish/finalize/delete doc files locally)
+- `/assistant` — Ask AI (Gemini + internal docs context via `/chunks.json`)
 - `/templates` — Template tool (prompt pack + markdown scaffold + optional sections)
 - `/blocks` — Blocks library (disclaimers + glossary + local custom blocks)
 
@@ -28,6 +30,7 @@ Public documentation workspace for Amber Protocol, designed for human readers an
 ## Content model
 
 - Docs live in `content/docs/*.md` (YAML frontmatter + markdown body).
+- Unpublished docs set `archived: true` in frontmatter (excluded from the app, exports, sitemap, and static params).
 - Templates live in `content/templates/*.json`.
 - Blocks (disclaimers + glossary) live in `content/blocks/*.json`.
 - Search synonyms live in `content/search/synonyms.json`.
@@ -59,6 +62,29 @@ pnpm qa
 ```
 
 `pnpm build` runs QA automatically (frontmatter schema, internal links, assets, Official gates, external links).
+
+## Doc workflow (create/publish/unpublish/delete)
+
+You can manage doc files in two ways:
+
+1) Browser UI: open `/studio` and connect your `content/docs` folder (Chrome/Edge recommended).
+2) CLI (repo-local):
+
+```bash
+pnpm docs:new -- --slug treasury-strategy --title "Treasury Strategy" --summary "How we manage treasury risk." --updated-at 2026-02-08
+pnpm docs:publish -- --slug treasury-strategy --version 2026-02-08
+pnpm docs:finalize -- --slug treasury-strategy --version 2026-02-08
+pnpm docs:unpublish -- --slug treasury-strategy --version 2026-02-08
+pnpm docs:delete -- --slug treasury-strategy --version 2026-02-08
+```
+
+## Google AI (Gemini)
+
+Gemini calls happen client-side from the browser (static export friendly). Paste your API key in:
+- `/templates` (Generate Markdown)
+- `/assistant` (Ask AI with internal docs context)
+
+Keys are saved locally in your browser to avoid retyping.
 
 ## Deployment (Cloudflare Pages)
 

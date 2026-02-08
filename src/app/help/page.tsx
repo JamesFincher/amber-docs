@@ -72,13 +72,14 @@ export default function HelpPage() {
         </div>
 
         <div className="card p-6">
-          <h2 className="font-display text-2xl font-semibold">4) Write using a template</h2>
+          <h2 className="font-display text-2xl font-semibold">4) Write + publish a document</h2>
           <p className="mt-3 text-zinc-800">
-            Templates help you write consistent documents. Pick a template, fill in details, then copy the AI prompt or the Markdown scaffold.
+            Use <span className="font-semibold">Write + publish</span> to create a new doc file and then publish it when it is ready.
+            You can also use Templates to copy an AI prompt and a Markdown scaffold.
           </p>
           <div className="mt-4">
-            <Link className="btn btn-primary" href="/templates">
-              Open Templates
+            <Link className="btn btn-primary" href="/studio">
+              Open Write + publish
             </Link>
           </div>
         </div>
@@ -126,4 +127,3 @@ export default function HelpPage() {
     </main>
   );
 }
-

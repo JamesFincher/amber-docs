@@ -39,6 +39,8 @@ describe("UI components (render smoke)", () => {
     expect(html).toContain("Search documents");
     expect(html).toContain("Documents");
     expect(html).toContain("Reading lists");
+    expect(html).toContain("Write + publish");
+    expect(html).toContain("Ask AI");
     expect(html).toContain("Templates");
     expect(html).toContain("Reusable text");
     expect(html).toContain("Help");
@@ -57,6 +59,7 @@ describe("UI components (render smoke)", () => {
             version: "1",
             title: "A",
             stage: "draft",
+            archived: false,
             summary: "s",
             updatedAt: "2026-01-01",
             owners: [],
@@ -88,6 +91,7 @@ describe("UI components (render smoke)", () => {
           version: "1",
           title: "A",
           stage: "official",
+          archived: false,
           summary: "s",
           updatedAt: "2026-01-01",
           lastReviewedAt: "2025-01-01",
@@ -112,6 +116,7 @@ describe("UI components (render smoke)", () => {
             version: "1",
             title: "A",
             stage: "official",
+            archived: false,
             summary: "s",
             updatedAt: "2026-01-01",
             owners: [],
@@ -139,5 +144,88 @@ describe("UI components (render smoke)", () => {
     expect(html).toContain("Needs review");
     expect(html).toContain("Citations present");
     expect(html).toContain("Unowned");
+  });
+
+  test("DocDetail renders related docs section when provided", async () => {
+    const { DocDetail } = await import("../src/app/docs/_components/doc-detail");
+    const html = renderToStaticMarkup(
+      React.createElement(DocDetail, {
+        doc: {
+          slug: "a",
+          version: "1",
+          title: "A",
+          stage: "final",
+          archived: false,
+          summary: "s",
+          updatedAt: "2026-01-01",
+          owners: [],
+          topics: [],
+          markdown: "# A\n\n## H2\nx\n",
+          aiChecks: [],
+          relatedContext: [],
+          relatedSlugs: [],
+          citations: [],
+          approvals: [],
+          toc: [],
+          headings: [],
+          searchText: "",
+          contentHash: "h",
+          sourcePath: "/tmp/a.md",
+        },
+        versions: [
+          {
+            slug: "a",
+            version: "1",
+            title: "A",
+            stage: "final",
+            archived: false,
+            summary: "s",
+            updatedAt: "2026-01-01",
+            owners: [],
+            topics: [],
+            markdown: "",
+            aiChecks: [],
+            relatedContext: [],
+            relatedSlugs: [],
+            citations: [],
+            approvals: [],
+            toc: [],
+            headings: [],
+            searchText: "",
+            contentHash: "h",
+            sourcePath: "/tmp/a.md",
+          },
+        ],
+        relatedDocs: [
+          {
+            slug: "b",
+            version: "1",
+            title: "B",
+            stage: "official",
+            archived: false,
+            summary: "sb",
+            updatedAt: "2026-01-02",
+            owners: [],
+            topics: [],
+            markdown: "# B\n\n## H2\nx\n",
+            aiChecks: [],
+            relatedContext: [],
+            relatedSlugs: [],
+            citations: [],
+            approvals: [],
+            toc: [],
+            headings: [],
+            searchText: "",
+            contentHash: "h2",
+            sourcePath: "/tmp/b.md",
+          },
+        ],
+        prev: null,
+        next: null,
+        isLatest: true,
+      }),
+    );
+    expect(html).toContain("Related docs");
+    expect(html).toContain("B");
   });
 });

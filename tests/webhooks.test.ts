@@ -63,4 +63,18 @@ describe("docs webhook helpers", () => {
     expect(String(headers["x-amber-signature"])).toMatch(/^sha256=/);
     expect(String(calls[0].init.body)).toContain("\"event\":\"docs.updated\"");
   });
+
+  test("sendDocsWebhook throws with response details on failure", async () => {
+    const payload = buildDocsWebhookPayload({
+      event: "docs.updated",
+      generatedAt: "2026-02-08T00:00:00.000Z",
+      docs: [{ slug: "a", version: "1", updatedAt: "2026-01-01", contentHash: "h1" }],
+    });
+
+    const fetchImpl: typeof fetch = async () => new Response("nope", { status: 500, statusText: "Bad" });
+
+    await expect(sendDocsWebhook({ url: "https://example.test/webhook", secret: "s", payload, fetchImpl })).rejects.toThrow(
+      /500/i,
+    );
+  });
 });
