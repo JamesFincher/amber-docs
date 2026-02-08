@@ -7,7 +7,9 @@ Public documentation workspace for Amber Protocol, designed for human readers an
 - `/` — Product landing page for the docs workspace
 - `/docs` — Documentation library with lifecycle stage badges (Draft / Final / Official)
 - `/docs/[slug]` — Individual markdown docs with AI checks and related context
+- `/docs.json` — Machine-readable index of docs metadata (for integrators)
 - `/templates` — Reusable template builder that outputs AI prompts + markdown scaffolds
+- `/blocks` — Reusable snippet library (disclaimers + glossary)
 
 
 ## Template tool (new)
@@ -29,6 +31,14 @@ pnpm dev
 ```
 
 Open http://localhost:3000.
+
+## Content QA (CI gate)
+
+```bash
+pnpm qa
+```
+
+`pnpm build` runs QA automatically (duplicate slugs, internal links, required metadata rules).
 
 ## Deployment (Cloudflare Pages)
 
