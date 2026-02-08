@@ -100,4 +100,61 @@ describe("lintDraftDocText", () => {
     expect(r.ok).toBe(false);
     expect(r.issues.map((i) => i.code)).toContain("missing_h2");
   });
+
+  test("flags YAML dates that were not quoted (parsed as Date objects)", () => {
+    const docText = [
+      "---",
+      "slug: a",
+      "version: 2026-02-08",
+      "title: A",
+      "summary: s",
+      "updatedAt: 2026-02-08",
+      "stage: draft",
+      "archived: true",
+      "visibility: internal",
+      "---",
+      "",
+      "# A",
+      "",
+      "## Overview",
+      "",
+      "Hello",
+      "",
+    ].join("\n");
+    const r = lintDraftDocText(docText);
+    expect(r.ok).toBe(false);
+    const codes = r.issues.map((i) => i.code);
+    expect(codes).toContain("updatedAt_not_string");
+    expect(codes).toContain("version_not_string");
+  });
+
+  test("flags unquoted lastReviewedAt on Official docs", () => {
+    const docText = [
+      "---",
+      "slug: a",
+      "version: \"2026-02-08\"",
+      "title: A",
+      "summary: s",
+      "updatedAt: \"2026-02-08\"",
+      "stage: official",
+      "archived: false",
+      "visibility: public",
+      "lastReviewedAt: 2026-02-08",
+      "owners: [\"Jane\"]",
+      "topics: [\"t1\"]",
+      "citations: [{ label: \"Internal\" }]",
+      "approvals: [{ name: \"Jane\", date: \"2026-02-08\" }]",
+      "---",
+      "",
+      "# A",
+      "",
+      "## Overview",
+      "",
+      "Hello",
+      "",
+    ].join("\n");
+    const r = lintDraftDocText(docText);
+    expect(r.ok).toBe(false);
+    expect(r.issues.map((i) => i.code)).toContain("official_lastReviewedAt_not_string");
+  });
 });

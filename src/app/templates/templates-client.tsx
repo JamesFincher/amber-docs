@@ -6,7 +6,14 @@ import type { DocTemplate } from "@/lib/templates";
 import { buildMarkdownSkeleton, buildPrompt, buildSectionPromptPack } from "@/lib/templates";
 import { CopyButton } from "@/components/CopyButton";
 import { geminiGenerateText } from "@/lib/ai/gemini";
-import { defaultGeminiModel, GEMINI_MODEL_PRESETS, readGeminiSettings, writeGeminiSettings } from "@/lib/ai/geminiSettings";
+import {
+  defaultGeminiModel,
+  DEFAULT_GEMINI_FLASH_MODEL,
+  DEFAULT_GEMINI_PRO_MODEL,
+  GEMINI_MODEL_PRESETS,
+  readGeminiSettings,
+  writeGeminiSettings,
+} from "@/lib/ai/geminiSettings";
 import { saveStudioImport } from "@/lib/studioImport";
 
 const CUSTOM_KEY = "amber-docs:templates:custom:v1";
@@ -505,8 +512,27 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
                 <option key={m} value={m} />
               ))}
             </datalist>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => setGeminiModel(DEFAULT_GEMINI_FLASH_MODEL)}
+                disabled={genBusy}
+              >
+                Use Gemini 3 Flash
+              </button>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => setGeminiModel(DEFAULT_GEMINI_PRO_MODEL)}
+                disabled={genBusy}
+              >
+                Use Gemini 3 Pro
+              </button>
+            </div>
             <div className="mt-2 text-sm text-zinc-600">
-              Suggested: <span className="font-semibold">{defaultGeminiModel()}</span> for speed, or a Pro model for depth (if enabled for your key).
+              Suggested: <span className="font-semibold">{DEFAULT_GEMINI_FLASH_MODEL}</span> for speed,{" "}
+              <span className="font-semibold">{DEFAULT_GEMINI_PRO_MODEL}</span> for depth.
             </div>
           </label>
         </div>

@@ -12,6 +12,8 @@ import { isoDate, resolveVersionAndUpdatedAt, safeFilePart, suggestedDocFileName
 import { geminiGenerateText } from "@/lib/ai/gemini";
 import {
   defaultGeminiModel,
+  DEFAULT_GEMINI_FLASH_MODEL,
+  DEFAULT_GEMINI_PRO_MODEL,
   GEMINI_MODEL_PRESETS,
   readGeminiSettings,
   writeGeminiSettings,
@@ -1771,7 +1773,18 @@ Output JSON only.`;
                 <option key={m} value={m} />
               ))}
             </datalist>
-            <div className="mt-2 text-sm text-zinc-600">Tip: Use the default unless you know you need a different model.</div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button className="btn btn-secondary" type="button" onClick={() => setModel(DEFAULT_GEMINI_FLASH_MODEL)} disabled={busy}>
+                Use Gemini 3 Flash
+              </button>
+              <button className="btn btn-secondary" type="button" onClick={() => setModel(DEFAULT_GEMINI_PRO_MODEL)} disabled={busy}>
+                Use Gemini 3 Pro
+              </button>
+            </div>
+            <div className="mt-2 text-sm text-zinc-600">
+              Suggested: <span className="font-semibold">{DEFAULT_GEMINI_FLASH_MODEL}</span> for speed,{" "}
+              <span className="font-semibold">{DEFAULT_GEMINI_PRO_MODEL}</span> for depth.
+            </div>
           </label>
         </div>
 
