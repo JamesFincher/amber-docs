@@ -33,14 +33,14 @@ export function DocDetail(props: {
 
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
-      <nav className="mb-6 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <div className="flex flex-wrap items-center gap-2 text-zinc-600">
+      <nav className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-700">
           <Link href="/" className="underline decoration-black/10 underline-offset-4 hover:decoration-black/30">
             Home
           </Link>
           <span className="text-zinc-300">/</span>
           <Link href="/docs" className="underline decoration-black/10 underline-offset-4 hover:decoration-black/30">
-            Docs
+            Documents
           </Link>
           {doc.collection ? (
             <>
@@ -59,12 +59,15 @@ export function DocDetail(props: {
 
         <div className="flex flex-wrap items-center gap-2">
           <VersionSelector slug={doc.slug} version={doc.version} versions={props.versions} isLatest={props.isLatest} />
-          <Link href={`/raw/v/${encodeURIComponent(doc.slug)}/${encodeURIComponent(doc.version)}`} className="btn btn-secondary">
-            View raw
+          <Link
+            href={`/raw/v/${encodeURIComponent(doc.slug)}/${encodeURIComponent(doc.version)}`}
+            className="btn btn-secondary"
+          >
+            View Markdown
           </Link>
-          <CopyButton text={doc.markdown} label="Copy raw" />
+          <CopyButton text={doc.markdown} label="Copy Markdown" />
           <Link href={`/docs/${encodeURIComponent(doc.slug)}/diff`} className="btn btn-secondary">
-            Diff
+            Compare versions
           </Link>
           <BookmarkButton slug={doc.slug} />
         </div>
@@ -80,7 +83,7 @@ export function DocDetail(props: {
             <span className="chip chip-muted">v{doc.version}</span>
           </div>
           <h1 className="mt-3 font-display text-5xl font-semibold tracking-tight">{doc.title}</h1>
-          <p className="mt-3 max-w-3xl text-lg text-zinc-700">{doc.summary}</p>
+          <p className="mt-3 max-w-3xl text-lg text-zinc-800">{doc.summary}</p>
 
           <div className="mt-5 flex flex-wrap gap-2">
             {doc.topics.map((t) => (
@@ -92,8 +95,8 @@ export function DocDetail(props: {
         </div>
 
         <div className="card p-5 lg:col-span-4">
-          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Metadata</div>
-          <dl className="mt-3 grid gap-2 text-sm">
+          <div className="text-sm font-semibold text-zinc-700">Metadata</div>
+          <dl className="mt-3 grid gap-3 text-base">
             <div className="flex items-center justify-between gap-4">
               <dt className="text-zinc-500">Updated</dt>
               <dd className="font-medium text-zinc-900">{fmtDate(doc.updatedAt)}</dd>
@@ -113,7 +116,7 @@ export function DocDetail(props: {
                   {doc.approvals.map((a) => (
                     <div key={`${a.name}:${a.date}`} className="flex items-center justify-between gap-4">
                       <span className="font-medium">{a.name}</span>
-                      <span className="text-xs text-zinc-500">{a.date}</span>
+                      <span className="text-sm text-zinc-600">{a.date}</span>
                     </div>
                   ))}
                 </dd>
@@ -142,58 +145,85 @@ export function DocDetail(props: {
       </header>
 
       <section className="grid gap-6 lg:grid-cols-12">
-        <aside className="lg:col-span-3">
-          <div className="sticky top-24 space-y-4">
+        <article className="card p-7 lg:col-span-8">
+          <Markdown value={doc.markdown} />
+        </article>
+
+        <aside className="lg:col-span-4">
+          <div className="sticky top-28 space-y-4">
+            <div className="card p-5">
+              <h2 className="font-display text-xl font-semibold">What can I do here?</h2>
+              <div className="mt-3 grid gap-2">
+                <BookmarkButton slug={doc.slug} />
+                <Link href={`/docs/${encodeURIComponent(doc.slug)}/diff`} className="btn btn-secondary">
+                  Compare versions
+                </Link>
+                <Link
+                  href={`/raw/v/${encodeURIComponent(doc.slug)}/${encodeURIComponent(doc.version)}`}
+                  className="btn btn-secondary"
+                >
+                  View Markdown
+                </Link>
+                <CopyButton text={doc.markdown} label="Copy Markdown" />
+              </div>
+              <div className="mt-3 text-sm text-zinc-600">
+                Bookmarks, notes, and feedback are stored locally in your browser.
+              </div>
+            </div>
+
             <Toc items={doc.toc} />
+
             {doc.collection ? (
-              <div className="card p-4">
-                <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Reading path</div>
+              <div className="card p-5">
+                <div className="text-sm font-semibold text-zinc-700">Reading list navigation</div>
                 <div className="mt-3 grid gap-2">
                   {props.prev ? (
-                    <Link href={`/docs/${encodeURIComponent(props.prev.slug)}`} className="btn btn-secondary w-full justify-between">
-                      <span className="text-zinc-500">Prev</span>
+                    <Link
+                      href={`/docs/${encodeURIComponent(props.prev.slug)}`}
+                      className="btn btn-secondary w-full justify-between"
+                    >
+                      <span className="text-zinc-600">Previous</span>
                       <span className="truncate">{props.prev.title}</span>
                     </Link>
                   ) : (
-                    <div className="text-sm text-zinc-500">No previous in path.</div>
+                    <div className="text-sm text-zinc-600">No previous document in this list.</div>
                   )}
                   {props.next ? (
-                    <Link href={`/docs/${encodeURIComponent(props.next.slug)}`} className="btn btn-secondary w-full justify-between">
-                      <span className="text-zinc-500">Next</span>
+                    <Link
+                      href={`/docs/${encodeURIComponent(props.next.slug)}`}
+                      className="btn btn-secondary w-full justify-between"
+                    >
+                      <span className="text-zinc-600">Next</span>
                       <span className="truncate">{props.next.title}</span>
                     </Link>
                   ) : (
-                    <div className="text-sm text-zinc-500">No next in path.</div>
+                    <div className="text-sm text-zinc-600">No next document in this list.</div>
                   )}
                 </div>
               </div>
             ) : null}
-          </div>
-        </aside>
 
-        <article className="card p-7 lg:col-span-6">
-          <Markdown value={doc.markdown} />
-        </article>
+            {doc.aiChecks.length ? (
+              <details className="card p-5">
+                <summary className="cursor-pointer font-display text-xl font-semibold">AI checks</summary>
+                <ul className="mt-3 list-disc space-y-2 pl-6 text-zinc-800">
+                  {doc.aiChecks.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
 
-        <aside className="lg:col-span-3">
-          <div className="sticky top-24 space-y-4">
-            <div className="card p-5">
-              <h2 className="font-display text-lg font-semibold">AI checks</h2>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-zinc-700">
-                {doc.aiChecks.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="card p-5">
-              <h2 className="font-display text-lg font-semibold">Related context</h2>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-zinc-700">
-                {doc.relatedContext.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
+            {doc.relatedContext.length ? (
+              <details className="card p-5">
+                <summary className="cursor-pointer font-display text-xl font-semibold">Related context</summary>
+                <ul className="mt-3 list-disc space-y-2 pl-6 text-zinc-800">
+                  {doc.relatedContext.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
 
             <NotesPanel doc={{ slug: doc.slug, version: doc.version, toc: doc.toc }} />
 
@@ -211,7 +241,11 @@ export function DocDetail(props: {
           <h2 className="font-display text-xl font-semibold">Related docs</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {props.relatedDocs.map((d) => (
-              <Link key={`${d.slug}:${d.version}`} href={`/docs/${encodeURIComponent(d.slug)}`} className="rounded-2xl border border-zinc-200 bg-white/70 p-4 backdrop-blur hover:bg-white">
+              <Link
+                key={`${d.slug}:${d.version}`}
+                href={`/docs/${encodeURIComponent(d.slug)}`}
+                className="rounded-2xl border border-zinc-200 bg-white p-5 hover:bg-zinc-50"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div className="font-semibold text-zinc-900">{d.title}</div>
                   <span className={`chip ${stageBadgeClass(d.stage)}`}>{d.stage}</span>

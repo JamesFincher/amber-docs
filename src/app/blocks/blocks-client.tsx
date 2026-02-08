@@ -179,12 +179,12 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Writer tools</p>
-            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Blocks</h1>
+            <p className="text-sm font-semibold text-zinc-700">Reusable text</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Copy standard language</h1>
           </div>
-          <nav className="flex flex-wrap gap-2 text-sm">
+          <nav className="flex flex-wrap gap-2">
             <Link href="/docs" className="btn btn-secondary">
-              Docs
+              Documents
             </Link>
             <Link href="/templates" className="btn btn-secondary">
               Templates
@@ -192,32 +192,35 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
             <Link href="/" className="btn btn-secondary">
               Home
             </Link>
+            <Link href="/help" className="btn btn-secondary">
+              Help
+            </Link>
           </nav>
         </div>
-        <p className="max-w-3xl text-zinc-600">
-          Reusable content blocks you can paste into docs or use inside template prompts. Add custom blocks
-          locally or export them as JSON.
+        <p className="max-w-3xl text-zinc-800">
+          Search for a disclaimer or glossary term, then click <span className="font-semibold">Copy</span> to paste it into a document.
+          Advanced: you can add custom items stored on this computer.
         </p>
       </header>
 
       <section className="card p-6">
         <div className="grid gap-3 md:grid-cols-3">
           <label className="block">
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Search</div>
+            <div className="text-sm font-semibold text-zinc-800">Search</div>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search blocks..."
-              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+              placeholder="Example: official, approval, disclaimer, definition"
+              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base outline-none focus:ring-4 focus:ring-black/10"
             />
           </label>
 
           <label className="block">
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Tag</div>
+            <div className="text-sm font-semibold text-zinc-800">Tag</div>
             <select
               value={tag}
               onChange={(e) => setTag(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
             >
               {tags.map((t) => (
                 <option key={t} value={t}>
@@ -227,10 +230,24 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
             </select>
           </label>
 
-          <div className="flex flex-wrap items-end justify-end gap-2">
-            <button className="btn btn-secondary" onClick={() => downloadJson("amber-blocks.json", { snippets: customSnippets, glossary: customGlossary })}>
-              Export custom
-            </button>
+          <div className="flex flex-col justify-end">
+            <details>
+              <summary className="cursor-pointer text-base font-semibold text-zinc-900">Advanced options</summary>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() =>
+                    downloadJson("amber-blocks.json", { snippets: customSnippets, glossary: customGlossary })
+                  }
+                  type="button"
+                >
+                  Export custom (JSON)
+                </button>
+              </div>
+              <div className="mt-2 text-sm text-zinc-600">
+                Custom items are stored in your browser (on this computer).
+              </div>
+            </details>
           </div>
         </div>
       </section>
@@ -238,49 +255,59 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
         <div className="card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">Disclaimers</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <button className="btn btn-secondary" onClick={() => snippetsImportRef.current?.click()}>
-                Import
-              </button>
-              <button className="btn btn-secondary" onClick={() => downloadJson("amber-custom-snippets.json", customSnippets)}>
-                Export
-              </button>
-              <input
-                ref={snippetsImportRef}
-                className="hidden"
-                type="file"
-                accept="application/json"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    const text = String(reader.result ?? "");
-                    const arr = safeParseArray(text);
-                    if (!arr) return alert("Invalid JSON file");
-                    const parsed = arr
-                      .map((x) => x as Record<string, unknown>)
-                      .filter((x) => typeof x.id === "string" && typeof x.title === "string" && typeof x.body === "string")
-                      .map((x) => ({
-                        id: String(x.id),
-                        title: String(x.title),
-                        body: String(x.body),
-                        tags: Array.isArray(x.tags) ? (x.tags.filter((t) => typeof t === "string") as string[]) : [],
-                      }));
-                    setCustomSnippets(parsed);
-                    writeCustomSnippets(parsed);
-                  };
-                  reader.readAsText(file);
-                  e.currentTarget.value = "";
-                }}
-              />
+            <div>
+              <h2 className="font-display text-2xl font-semibold">Disclaimers</h2>
+              <p className="mt-1 text-zinc-700">Short standard statements you can paste into a document.</p>
             </div>
+            <details>
+              <summary className="cursor-pointer text-base font-semibold text-zinc-900">Advanced</summary>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button className="btn btn-secondary" type="button" onClick={() => snippetsImportRef.current?.click()}>
+                  Import JSON
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => downloadJson("amber-custom-snippets.json", customSnippets)}
+                >
+                  Export JSON
+                </button>
+                <input
+                  ref={snippetsImportRef}
+                  className="hidden"
+                  type="file"
+                  accept="application/json"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const text = String(reader.result ?? "");
+                      const arr = safeParseArray(text);
+                      if (!arr) return alert("Invalid JSON file");
+                      const parsed = arr
+                        .map((x) => x as Record<string, unknown>)
+                        .filter((x) => typeof x.id === "string" && typeof x.title === "string" && typeof x.body === "string")
+                        .map((x) => ({
+                          id: String(x.id),
+                          title: String(x.title),
+                          body: String(x.body),
+                          tags: Array.isArray(x.tags) ? (x.tags.filter((t) => typeof t === "string") as string[]) : [],
+                        }));
+                      setCustomSnippets(parsed);
+                      writeCustomSnippets(parsed);
+                    };
+                    reader.readAsText(file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </div>
+            </details>
           </div>
 
           <div className="mt-4 grid gap-4">
             {filteredSnippets.map((s) => (
-              <div key={s.id} className="rounded-2xl border border-zinc-200 bg-white/70 p-5 backdrop-blur">
+              <div key={s.id} className="rounded-2xl border border-zinc-200 bg-white p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-zinc-900">{s.title}</div>
@@ -293,36 +320,36 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
                         ))}
                       </div>
                     ) : null}
-                    <div className="mt-3 text-sm text-zinc-700">{s.body}</div>
+                    <div className="mt-3 text-zinc-800">{s.body}</div>
                   </div>
-                  <CopyButton text={s.body} label="Copy" />
+                  <CopyButton text={s.body} label="Copy text" />
                 </div>
               </div>
             ))}
           </div>
 
           <details className="mt-6">
-            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Add custom disclaimer</summary>
+            <summary className="cursor-pointer text-base font-semibold text-zinc-900">Advanced: Add a custom disclaimer</summary>
             <div className="mt-3 grid gap-3">
               <input
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                 placeholder="Title"
                 value={newSnippetTitle}
                 onChange={(e) => setNewSnippetTitle(e.target.value)}
               />
               <textarea
-                className="h-28 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="h-32 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                 placeholder="Body"
                 value={newSnippetBody}
                 onChange={(e) => setNewSnippetBody(e.target.value)}
               />
               <input
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                 placeholder="Tags (comma separated)"
                 value={newSnippetTags}
                 onChange={(e) => setNewSnippetTags(e.target.value)}
               />
-              <button className="btn btn-primary" onClick={addSnippet}>
+              <button className="btn btn-primary" type="button" onClick={addSnippet}>
                 Add disclaimer
               </button>
             </div>
@@ -331,49 +358,61 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
 
         <div className="card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">Glossary</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <button className="btn btn-secondary" onClick={() => glossaryImportRef.current?.click()}>
-                Import
-              </button>
-              <button className="btn btn-secondary" onClick={() => downloadJson("amber-custom-glossary.json", customGlossary)}>
-                Export
-              </button>
-              <input
-                ref={glossaryImportRef}
-                className="hidden"
-                type="file"
-                accept="application/json"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    const text = String(reader.result ?? "");
-                    const arr = safeParseArray(text);
-                    if (!arr) return alert("Invalid JSON file");
-                    const parsed = arr
-                      .map((x) => x as Record<string, unknown>)
-                      .filter((x) => typeof x.term === "string" && typeof x.definition === "string")
-                      .map((x) => ({
-                        term: String(x.term),
-                        definition: String(x.definition),
-                        synonyms: Array.isArray(x.synonyms) ? (x.synonyms.filter((t) => typeof t === "string") as string[]) : [],
-                        tags: Array.isArray(x.tags) ? (x.tags.filter((t) => typeof t === "string") as string[]) : [],
-                      }));
-                    setCustomGlossary(parsed);
-                    writeCustomGlossary(parsed);
-                  };
-                  reader.readAsText(file);
-                  e.currentTarget.value = "";
-                }}
-              />
+            <div>
+              <h2 className="font-display text-2xl font-semibold">Glossary</h2>
+              <p className="mt-1 text-zinc-700">Definitions for common terms (copy into docs for consistency).</p>
             </div>
+            <details>
+              <summary className="cursor-pointer text-base font-semibold text-zinc-900">Advanced</summary>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button className="btn btn-secondary" type="button" onClick={() => glossaryImportRef.current?.click()}>
+                  Import JSON
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => downloadJson("amber-custom-glossary.json", customGlossary)}
+                >
+                  Export JSON
+                </button>
+                <input
+                  ref={glossaryImportRef}
+                  className="hidden"
+                  type="file"
+                  accept="application/json"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const text = String(reader.result ?? "");
+                      const arr = safeParseArray(text);
+                      if (!arr) return alert("Invalid JSON file");
+                      const parsed = arr
+                        .map((x) => x as Record<string, unknown>)
+                        .filter((x) => typeof x.term === "string" && typeof x.definition === "string")
+                        .map((x) => ({
+                          term: String(x.term),
+                          definition: String(x.definition),
+                          synonyms: Array.isArray(x.synonyms)
+                            ? (x.synonyms.filter((t) => typeof t === "string") as string[])
+                            : [],
+                          tags: Array.isArray(x.tags) ? (x.tags.filter((t) => typeof t === "string") as string[]) : [],
+                        }));
+                      setCustomGlossary(parsed);
+                      writeCustomGlossary(parsed);
+                    };
+                    reader.readAsText(file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </div>
+            </details>
           </div>
 
           <div className="mt-4 grid gap-3">
             {filteredGlossary.map((g) => (
-              <div key={g.term} className="rounded-2xl border border-zinc-200 bg-white/70 p-5 backdrop-blur">
+              <div key={g.term} className="rounded-2xl border border-zinc-200 bg-white p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-zinc-900">{g.term}</div>
@@ -386,41 +425,39 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
                         ))}
                       </div>
                     ) : null}
-                    <div className="mt-3 text-sm text-zinc-700">{g.definition}</div>
+                    <div className="mt-3 text-zinc-800">{g.definition}</div>
                     {g.synonyms?.length ? (
-                      <div className="mt-2 text-xs text-zinc-500">
-                        Synonyms: {g.synonyms.join(", ")}
-                      </div>
+                      <div className="mt-2 text-sm text-zinc-600">Synonyms: {g.synonyms.join(", ")}</div>
                     ) : null}
                   </div>
-                  <CopyButton text={`${g.term}: ${g.definition}`} label="Copy" />
+                  <CopyButton text={`${g.term}: ${g.definition}`} label="Copy term + definition" />
                 </div>
               </div>
             ))}
           </div>
 
           <details className="mt-6">
-            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Add custom glossary entry</summary>
+            <summary className="cursor-pointer text-base font-semibold text-zinc-900">Advanced: Add a custom glossary entry</summary>
             <div className="mt-3 grid gap-3">
               <input
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                 placeholder="Term"
                 value={newGlossaryTerm}
                 onChange={(e) => setNewGlossaryTerm(e.target.value)}
               />
               <textarea
-                className="h-28 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="h-32 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                 placeholder="Definition"
                 value={newGlossaryDefinition}
                 onChange={(e) => setNewGlossaryDefinition(e.target.value)}
               />
               <input
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                 placeholder="Tags (comma separated)"
                 value={newGlossaryTags}
                 onChange={(e) => setNewGlossaryTags(e.target.value)}
               />
-              <button className="btn btn-primary" onClick={addGlossary}>
+              <button className="btn btn-primary" type="button" onClick={addGlossary}>
                 Add entry
               </button>
             </div>
@@ -430,4 +467,3 @@ export function BlocksClient({ disclaimers, glossary }: { disclaimers: Snippet[]
     </main>
   );
 }
-

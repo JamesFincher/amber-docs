@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Atkinson_Hyperlegible, Fraunces, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -11,10 +11,11 @@ export const metadata: Metadata = {
   description: "AI-native docs workspace for Amber Protocol",
 };
 
-const fontSans = Space_Grotesk({
+const fontSans = Atkinson_Hyperlegible({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-sans",
+  weight: ["400", "700"],
 });
 
 const fontDisplay = Fraunces({
@@ -38,8 +39,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable} ${fontMono.variable}`}>
       <body className="antialiased">
+        <a href="#main" className="skip-link">
+          Skip to main content
+        </a>
         <SiteHeader />
-        <div className="min-h-[calc(100vh-4rem)]">{children}</div>
+        <div id="main" tabIndex={-1} className="min-h-[calc(100vh-4rem)] focus:outline-none">
+          {children}
+        </div>
         <SiteFooter />
         <Telemetry />
         {plausibleDomain ? (

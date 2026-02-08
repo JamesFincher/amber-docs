@@ -39,8 +39,7 @@ export function BookmarkButton({ slug }: { slug: string }) {
         setBookmarked(bm.has(slug));
       }}
     >
-      {bookmarked ? "Bookmarked" : "Bookmark"}
+      {bookmarked ? "Bookmarked" : "Save bookmark"}
     </button>
   );
 }
-

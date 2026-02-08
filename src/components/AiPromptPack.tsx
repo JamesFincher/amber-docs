@@ -80,19 +80,19 @@ export function AiPromptPack({ doc, relatedDocs }: { doc: DocRecord; relatedDocs
   const docPrompt = buildReviewPrompt({ doc, relatedDocs });
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white/60 p-6 backdrop-blur">
+    <section className="card p-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">AI prompt pack</h2>
+        <h2 className="font-display text-2xl font-semibold">AI helper prompts (optional)</h2>
         <CopyButton text={docPrompt} label="Copy full-doc prompt" />
       </div>
-      <p className="mb-4 text-sm text-zinc-600">
-        Copy prompts into your model of choice for rewrite, claim extraction, and contradiction scanning.
+      <p className="mb-4 text-zinc-700">
+        If you use an AI tool, these prompts help with rewrites, claim extraction, and contradiction checks. You can ignore this section if you do not use AI.
       </p>
 
-      <details className="rounded-lg border border-zinc-200 bg-white/60 p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Full-doc review prompt</summary>
+      <details className="rounded-xl border border-zinc-200 bg-white p-4">
+        <summary className="cursor-pointer text-base font-semibold text-zinc-900">Full-doc review prompt</summary>
         <textarea
-          className="mt-3 h-56 w-full rounded-md border border-zinc-300 p-3 font-mono text-xs"
+          className="mt-3 h-56 w-full rounded-xl border border-zinc-300 bg-white p-4 font-mono text-sm text-zinc-900"
           value={docPrompt}
           readOnly
         />
@@ -108,16 +108,16 @@ export function AiPromptPack({ doc, relatedDocs }: { doc: DocRecord; relatedDocs
               relatedDocs,
             });
             return (
-              <details key={s.heading} className="rounded-lg border border-zinc-200 bg-white/60 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-zinc-900">
+              <details key={s.heading} className="rounded-xl border border-zinc-200 bg-white p-4">
+                <summary className="cursor-pointer text-base font-semibold text-zinc-900">
                   Section: {s.heading}
                 </summary>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-xs text-zinc-500">Rewrite + claims + contradictions</div>
+                  <div className="text-sm text-zinc-600">Rewrite + claims + contradictions</div>
                   <CopyButton text={prompt} label="Copy section prompt" />
                 </div>
                 <textarea
-                  className="mt-3 h-44 w-full rounded-md border border-zinc-300 p-3 font-mono text-xs"
+                  className="mt-3 h-44 w-full rounded-xl border border-zinc-300 bg-white p-4 font-mono text-sm text-zinc-900"
                   value={prompt}
                   readOnly
                 />

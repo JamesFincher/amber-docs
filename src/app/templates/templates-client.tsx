@@ -160,34 +160,37 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
       <header className="mb-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Writer tools</p>
-            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Template tool</h1>
+            <p className="text-sm font-semibold text-zinc-700">Templates</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">Write a document</h1>
           </div>
-          <nav className="flex flex-wrap gap-2 text-sm">
+          <nav className="flex flex-wrap gap-2">
             <Link href="/docs" className="btn btn-secondary">
-              Docs
+              Documents
             </Link>
             <Link href="/blocks" className="btn btn-secondary">
-              Blocks
+              Reusable text
             </Link>
             <Link href="/" className="btn btn-secondary">
               Home
             </Link>
+            <Link href="/help" className="btn btn-secondary">
+              Help
+            </Link>
           </nav>
         </div>
-        <p className="max-w-3xl text-zinc-600">
-          Generate uniform document shapes and AI-ready prompts. Use built-in templates, or bring your own
-          via JSON.
+        <p className="max-w-3xl text-zinc-800">
+          Pick a template, fill in a few details, then copy the prompt or the Markdown scaffold. Advanced: you can import/export custom templates as JSON.
         </p>
       </header>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="card p-6">
           <div className="grid gap-4">
-            <label className="block text-sm font-medium text-zinc-700">
-              Template
+            <div className="font-display text-2xl font-semibold">Step 1: Pick a template</div>
+            <label className="block text-base font-semibold text-zinc-800">
+              Template type
               <select
-                className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                 value={templateId}
                 onChange={(e) => setTemplateId(e.target.value)}
               >
@@ -199,10 +202,10 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
               </select>
             </label>
 
-            <label className="block text-sm font-medium text-zinc-700">
-              Topic
+            <label className="block text-base font-semibold text-zinc-800">
+              Topic (document title)
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="Example: Q3 Treasury Strategy"
@@ -210,7 +213,7 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
             </label>
 
             {selectedTemplate ? (
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+              <div className="rounded-xl border border-zinc-200 bg-white p-4 text-base text-zinc-800">
                 <div className="font-semibold text-zinc-900">{selectedTemplate.name}</div>
                 <div className="mt-1">{selectedTemplate.description}</div>
                 {selectedTemplate.tags.length ? (
@@ -227,11 +230,12 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
 
             {selectedTemplate ? (
               <div className="grid gap-3">
+                <div className="font-display text-2xl font-semibold">Step 2: Fill in details</div>
                 {selectedTemplate.requiredFields.map((field) => (
-                  <label key={field.key} className="block text-sm font-medium text-zinc-700">
+                  <label key={field.key} className="block text-base font-semibold text-zinc-800">
                     {field.label}
                     <input
-                      className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+                      className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
                       value={values[field.key] ?? ""}
                       onChange={(e) =>
                         setValues((prev) => ({
@@ -250,7 +254,7 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
 
         <div className="card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">Sections</h2>
+            <div className="font-display text-2xl font-semibold">Step 3: Choose sections</div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 className="btn btn-secondary"
@@ -278,13 +282,17 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
           {selectedTemplate ? (
             <div className="mt-4 grid gap-2">
               {selectedTemplate.sections.map((s) => (
-                <label key={s.title} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2">
-                  <div className="text-sm font-medium text-zinc-900">{s.title}</div>
+                <label
+                  key={s.title}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3"
+                >
+                  <div className="text-base font-semibold text-zinc-900">{s.title}</div>
                   {s.optional ? (
                     <input
                       type="checkbox"
                       checked={enabledOptional.has(s.title)}
                       onChange={() => toggleOptional(s.title)}
+                      className="h-5 w-5"
                     />
                   ) : (
                     <span className="chip chip-muted">required</span>
@@ -295,10 +303,11 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
           ) : null}
 
           <details className="mt-6">
-            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">Custom template registry (local JSON)</summary>
-            <p className="mt-2 text-sm text-zinc-600">
-              Paste an array of templates to save locally (in this browser). This is the simplest path for
-              team sharing: export JSON and commit it to <code>content/templates/</code>.
+            <summary className="cursor-pointer text-base font-semibold text-zinc-900">
+              Advanced: Custom templates (JSON)
+            </summary>
+            <p className="mt-2 text-zinc-700">
+              You can save templates locally (in this browser), or export JSON and commit it to <code>content/templates/</code>.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button className="btn btn-primary" onClick={onSaveCustomJson}>
@@ -319,7 +328,7 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
               </button>
             </div>
             <textarea
-              className="mt-3 h-56 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-50"
+              className="mt-3 h-56 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-sm text-zinc-50"
               value={customJson}
               onChange={(e) => setCustomJson(e.target.value)}
               spellCheck={false}
@@ -331,11 +340,11 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
         <div className="card p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">Prompt output</h2>
+            <h2 className="font-display text-2xl font-semibold">Copy: AI prompt</h2>
             <CopyButton text={promptOutput} label="Copy prompt" />
           </div>
           <textarea
-            className="h-72 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-50"
+            className="h-72 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
             value={promptOutput}
             readOnly
             spellCheck={false}
@@ -344,11 +353,11 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
 
         <div className="card p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">Markdown scaffold</h2>
+            <h2 className="font-display text-2xl font-semibold">Copy: Markdown scaffold</h2>
             <CopyButton text={markdownOutput} label="Copy scaffold" />
           </div>
           <textarea
-            className="h-72 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-50"
+            className="h-72 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
             value={markdownOutput}
             readOnly
             spellCheck={false}
@@ -359,9 +368,9 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
       <section className="mt-8 card p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl font-semibold">Section-by-section prompt pack</h2>
-            <p className="mt-1 text-sm text-zinc-600">
-              Use these prompts to draft each section independently (rewrite + fact-check notes included).
+            <h2 className="font-display text-2xl font-semibold">Copy: Section-by-section prompts</h2>
+            <p className="mt-1 text-zinc-700">
+              Use these prompts to draft each section independently.
             </p>
           </div>
           <CopyButton
@@ -371,13 +380,13 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
         </div>
         <div className="mt-4 grid gap-4">
           {sectionPrompts.map((p) => (
-            <div key={p.section} className="rounded-2xl border border-zinc-200 bg-white/70 p-4 backdrop-blur">
+            <div key={p.section} className="rounded-2xl border border-zinc-200 bg-white p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="font-semibold text-zinc-900">{p.section}</div>
                 <CopyButton text={p.prompt} label="Copy section prompt" />
               </div>
               <textarea
-                className="mt-3 h-44 w-full rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-50"
+                className="mt-3 h-44 w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-sm text-zinc-900"
                 value={p.prompt}
                 readOnly
                 spellCheck={false}
@@ -389,4 +398,3 @@ export function TemplatesClient({ templates }: { templates: DocTemplate[] }) {
     </main>
   );
 }
-

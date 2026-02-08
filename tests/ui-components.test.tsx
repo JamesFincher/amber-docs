@@ -33,6 +33,17 @@ vi.mock("@/components/FeedbackWidget", () => ({ FeedbackWidget: () => React.crea
 vi.mock("@/components/NotesPanel", () => ({ NotesPanel: () => React.createElement("div", null, "notes") }));
 
 describe("UI components (render smoke)", () => {
+  test("SiteHeader includes plain-language navigation and search label", async () => {
+    const { SiteHeader } = await import("../src/components/SiteHeader");
+    const html = renderToStaticMarkup(React.createElement(SiteHeader));
+    expect(html).toContain("Search documents");
+    expect(html).toContain("Documents");
+    expect(html).toContain("Reading lists");
+    expect(html).toContain("Templates");
+    expect(html).toContain("Reusable text");
+    expect(html).toContain("Help");
+  });
+
   test("VersionSelector renders options including Latest label", async () => {
     const { VersionSelector } = await import("../src/app/docs/_components/version-selector");
     const html = renderToStaticMarkup(

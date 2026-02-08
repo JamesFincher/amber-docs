@@ -319,59 +319,87 @@ export function DocsLibraryClient({
     writeSavedSearches(next);
   }
 
+  function reset() {
+    setQuery("");
+    setStage("all");
+    setTopic("all");
+    setCollection("all");
+    setBookmarkedOnly(false);
+  }
+
   return (
     <div className="space-y-6">
       <section className="card p-6">
-        <div className="grid gap-3 md:grid-cols-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl font-semibold">Search</h2>
+            <p className="mt-1 text-zinc-700">
+              Type a word or phrase. Filters are optional.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="btn btn-secondary" type="button" onClick={reset}>
+              Reset
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={saveCurrentSearch}>
+              Save this search
+            </button>
+            <Link href="/docs.json" className="btn btn-secondary">
+              Download docs.json
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-5">
           <label className="block md:col-span-2">
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Search</div>
+            <div className="text-sm font-semibold text-zinc-800">Search words</div>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search docs..."
-              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+              placeholder="Example: approvals, treasury, runbook"
+              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base outline-none focus:ring-4 focus:ring-black/10"
             />
           </label>
 
           <label className="block">
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Stage</div>
+            <div className="text-sm font-semibold text-zinc-800">Status</div>
             <select
               value={stage}
               onChange={(e) => setStage(e.target.value as StageFilter)}
-              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
             >
-              <option value="all">All</option>
-              <option value="official">Official</option>
-              <option value="final">Final</option>
-              <option value="draft">Draft</option>
+              <option value="all">All statuses</option>
+              <option value="official">Official (published)</option>
+              <option value="final">Final (ready)</option>
+              <option value="draft">Draft (in progress)</option>
             </select>
           </label>
 
           <label className="block">
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Topic</div>
+            <div className="text-sm font-semibold text-zinc-800">Topic</div>
             <select
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
             >
               {topics.map((t) => (
                 <option key={t} value={t}>
-                  {t === "all" ? "All" : t}
+                  {t === "all" ? "All topics" : t}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="block">
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Collection</div>
+            <div className="text-sm font-semibold text-zinc-800">Reading list</div>
             <select
               value={collection}
               onChange={(e) => setCollection(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base"
             >
               {collections.map((c) => (
                 <option key={c} value={c}>
-                  {c === "all" ? "All" : c}
+                  {c === "all" ? "All reading lists" : c}
                 </option>
               ))}
             </select>
@@ -379,17 +407,17 @@ export function DocsLibraryClient({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <label className="flex items-center gap-2 text-sm text-zinc-700">
-            <input type="checkbox" checked={bookmarkedOnly} onChange={(e) => setBookmarkedOnly(e.target.checked)} />
-            Bookmarked only
+          <label className="flex items-center gap-3 text-base text-zinc-800">
+            <input
+              type="checkbox"
+              checked={bookmarkedOnly}
+              onChange={(e) => setBookmarkedOnly(e.target.checked)}
+              className="h-5 w-5"
+            />
+            Only show bookmarks
           </label>
-          <div className="flex flex-wrap items-center gap-2">
-            <button className="btn btn-secondary" onClick={saveCurrentSearch}>
-              Save search
-            </button>
-            <Link href="/docs.json" className="btn btn-secondary">
-              docs.json
-            </Link>
+          <div className="text-sm text-zinc-600">
+            Bookmarks and saved searches are stored on this computer.
           </div>
         </div>
       </section>
@@ -397,7 +425,7 @@ export function DocsLibraryClient({
       {savedSearches.length ? (
         <section className="card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-lg font-semibold">Saved searches</h2>
+            <h2 className="font-display text-2xl font-semibold">Saved searches</h2>
             <button
               className="btn btn-secondary"
               onClick={() => {
@@ -410,11 +438,11 @@ export function DocsLibraryClient({
           </div>
           <div className="mt-4 grid gap-2 md:grid-cols-2">
             {savedSearches.map((s) => (
-              <div key={s.id} className="rounded-2xl border border-zinc-200 bg-white/70 p-4 backdrop-blur">
+              <div key={s.id} className="rounded-2xl border border-zinc-200 bg-white p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-zinc-900">{s.name}</div>
-                    <div className="mt-1 text-xs text-zinc-500">
+                    <div className="mt-1 text-sm text-zinc-600">
                       {[
                         s.q ? `q="${s.q}"` : null,
                         s.stage !== "all" ? `stage=${s.stage}` : null,
@@ -427,10 +455,10 @@ export function DocsLibraryClient({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="btn btn-secondary" onClick={() => applySaved(s)}>
-                      Apply
+                    <button className="btn btn-primary" onClick={() => applySaved(s)} type="button">
+                      Use
                     </button>
-                    <button className="btn btn-secondary" onClick={() => deleteSaved(s.id)}>
+                    <button className="btn btn-secondary" onClick={() => deleteSaved(s.id)} type="button">
                       Delete
                     </button>
                   </div>
@@ -441,8 +469,9 @@ export function DocsLibraryClient({
         </section>
       ) : null}
 
-      <div className="text-xs text-zinc-500">
-        Showing {results.length} docs{index ? "" : " (index loading...)"}
+      <div className="text-sm text-zinc-700">
+        Showing <span className="font-semibold">{results.length}</span> document{results.length === 1 ? "" : "s"}
+        {index ? "" : " (loading search index...)"}
       </div>
 
       <div className="grid gap-4">
@@ -459,7 +488,7 @@ export function DocsLibraryClient({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`chip ${stageBadgeClass(doc.stage)}`}>{doc.stage}</span>
                     {reviewFlag ? <span className="chip bg-amber-100 text-amber-900">{reviewFlag}</span> : null}
-                    {doc.citationsCount ? <span className="chip chip-muted">citations</span> : null}
+                    {doc.citationsCount ? <span className="chip chip-muted">has citations</span> : null}
                     {doc.versionsCount > 1 ? <span className="chip chip-muted">{doc.versionsCount} versions</span> : null}
                     {doc.collection ? <span className="chip chip-outline">{doc.collection}</span> : null}
                   </div>
@@ -469,7 +498,7 @@ export function DocsLibraryClient({
                   </Link>
                   <p className="mt-2 text-zinc-700">{highlightSimple(doc.summary, query)}</p>
 
-                  <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-zinc-500">
+                  <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-600">
                     <div>Updated: {doc.updatedAt}</div>
                     <div>Reviewed: {reviewed}</div>
                     <div>Owners: {owners}</div>
@@ -482,10 +511,10 @@ export function DocsLibraryClient({
                     onClick={() => toggleBookmark(doc.slug)}
                     type="button"
                   >
-                    {isBookmarked ? "Bookmarked" : "Bookmark"}
+                    {isBookmarked ? "Bookmarked" : "Save bookmark"}
                   </button>
                   <Link href={`/docs/${encodeURIComponent(doc.slug)}/diff`} className="btn btn-secondary">
-                    Diff
+                    Compare versions
                   </Link>
                 </div>
               </div>

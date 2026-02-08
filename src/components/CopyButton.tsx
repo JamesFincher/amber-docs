@@ -22,7 +22,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
     <button
       type="button"
       onClick={onCopy}
-      className="btn btn-secondary text-xs"
+      className="btn btn-secondary"
     >
       {textLabel}
     </button>
