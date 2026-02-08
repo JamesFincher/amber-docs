@@ -22,10 +22,9 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
     <button
       type="button"
       onClick={onCopy}
-      className="inline-flex items-center justify-center rounded-md border border-black/10 bg-white/60 px-2.5 py-1.5 text-xs font-medium text-zinc-900 shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+      className="btn btn-secondary text-xs"
     >
       {textLabel}
     </button>
   );
 }
-

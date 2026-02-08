@@ -1,0 +1,21 @@
+[
+  {
+    "term": "Official",
+    "definition": "Content that represents the current published stance and is safe to rely on publicly.",
+    "synonyms": ["Published"],
+    "tags": ["lifecycle"]
+  },
+  {
+    "term": "Final",
+    "definition": "Content that is near-ready but may still change; review is largely complete.",
+    "synonyms": ["Near-final"],
+    "tags": ["lifecycle"]
+  },
+  {
+    "term": "Draft",
+    "definition": "Work-in-progress content; not yet approved for external reliance.",
+    "synonyms": ["WIP"],
+    "tags": ["lifecycle"]
+  }
+]
+

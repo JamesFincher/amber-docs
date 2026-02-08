@@ -1,4 +1,4 @@
-import { createSlugger } from "@/lib/slugger";
+import { createSlugger } from "./slugger";
 
 export type TocItem = {
   id: string;

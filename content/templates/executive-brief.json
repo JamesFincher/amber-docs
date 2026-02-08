@@ -1,0 +1,21 @@
+{
+  "id": "executive-brief",
+  "name": "Executive Brief",
+  "description": "Leadership summary with crisp strategy, outcomes, risks, and decisions.",
+  "tags": ["leadership", "strategy"],
+  "requiredFields": [
+    { "key": "audience", "label": "Audience", "placeholder": "Executive team" },
+    { "key": "timeframe", "label": "Timeframe", "placeholder": "Q2 2026" },
+    { "key": "decision", "label": "Decision Needed", "placeholder": "Approve launch scope" }
+  ],
+  "sections": [
+    { "title": "Context" },
+    { "title": "Strategic objective" },
+    { "title": "Key facts" },
+    { "title": "Risks and mitigations" },
+    { "title": "Decision required" },
+    { "title": "Next 30/60/90 day plan" },
+    { "title": "Appendix (links + sources)", "optional": true }
+  ]
+}
+

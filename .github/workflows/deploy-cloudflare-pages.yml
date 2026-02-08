@@ -5,14 +5,20 @@ on:
     branches:
       - main
       - work
+  pull_request:
+    branches:
+      - main
+      - work
   workflow_dispatch:
 
 jobs:
   deploy:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       deployments: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,7 +42,35 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
+        id: cf
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy out --project-name amber-docs --branch ${{ github.ref_name }}
+          command: |
+            pages deploy out --project-name amber-docs --branch ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
+
+      - name: Send docs webhook (optional)
+        if: ${{ secrets.DOCS_WEBHOOK_URL != '' && secrets.DOCS_WEBHOOK_SECRET != '' }}
+        env:
+          DOCS_WEBHOOK_URL: ${{ secrets.DOCS_WEBHOOK_URL }}
+          DOCS_WEBHOOK_SECRET: ${{ secrets.DOCS_WEBHOOK_SECRET }}
+        run: pnpm tsx scripts/send-webhook.ts
+
+      - name: Comment preview URL (PR only)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = `pr-${context.payload.pull_request.number}`;
+            const url = `https://${branch}.amber-docs.pages.dev`;
+            const body = [
+              `Cloudflare Pages preview deployed: ${url}`,
+              ``,
+              `Commit: ${context.sha}`,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
