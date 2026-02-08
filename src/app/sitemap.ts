@@ -13,6 +13,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/docs`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${base}/templates`, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${base}/blocks`, changeFrequency: "weekly", priority: 0.5 },
     ...docs.map((doc) => ({
       url: `${base}/docs/${encodeURIComponent(doc.slug)}`,
       lastModified: new Date(doc.updatedAt),

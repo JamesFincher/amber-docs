@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { docs, stageBadgeClass } from "@/lib/docs";
+import { docs } from "@/lib/docs";
+import { DocsLibraryClient } from "./DocsLibraryClient";
 
 export const metadata = {
   title: "Docs | Amber Protocol",
@@ -28,24 +29,7 @@ export default function DocsIndexPage() {
         </p>
       </header>
 
-      <div className="grid gap-4">
-        {docs.map((doc) => (
-          <Link
-            key={doc.slug}
-            href={`/docs/${doc.slug}`}
-            className="rounded-xl border border-zinc-200 p-5 transition hover:border-zinc-400"
-          >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold">{doc.title}</h2>
-              <span className={`rounded-full px-3 py-1 text-xs font-medium ${stageBadgeClass(doc.stage)}`}>
-                {doc.stage}
-              </span>
-            </div>
-            <p className="mb-2 text-zinc-700">{doc.summary}</p>
-            <p className="text-xs text-zinc-500">Updated: {doc.updatedAt}</p>
-          </Link>
-        ))}
-      </div>
+      <DocsLibraryClient docs={docs} />
     </main>
   );
 }

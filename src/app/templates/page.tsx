@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { CopyButton } from "@/components/CopyButton";
 import {
   buildMarkdownSkeleton,
   buildPrompt,
+  buildSectionPromptPack,
   docTemplates,
   type DocTemplate,
 } from "@/lib/templates";
@@ -29,9 +32,31 @@ export default function TemplateToolPage() {
     [selectedTemplate, values, topic],
   );
 
+  const sectionPrompts = useMemo(
+    () => buildSectionPromptPack(selectedTemplate, values, topic),
+    [selectedTemplate, values, topic],
+  );
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-6 py-12">
       <header className="space-y-3">
+        <nav className="flex flex-wrap gap-3 text-sm">
+          <Link href="/" className="underline decoration-black/20 underline-offset-4 hover:decoration-black/40">
+            Home
+          </Link>
+          <Link
+            href="/docs"
+            className="underline decoration-black/20 underline-offset-4 hover:decoration-black/40"
+          >
+            Docs
+          </Link>
+          <Link
+            href="/blocks"
+            className="underline decoration-black/20 underline-offset-4 hover:decoration-black/40"
+          >
+            Blocks
+          </Link>
+        </nav>
         <h1 className="text-3xl font-semibold">Document Template Tool</h1>
         <p className="max-w-3xl text-zinc-600">
           Generate reusable, uniform document shapes and AI-ready prompts. Pick a template, fill required
@@ -99,7 +124,10 @@ export default function TemplateToolPage() {
           </div>
 
           <div className="rounded-lg border border-zinc-200 p-4">
-            <h2 className="mb-2 text-lg font-semibold">Prompt output</h2>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Prompt output</h2>
+              <CopyButton text={promptOutput} label="Copy prompt" />
+            </div>
             <textarea
               className="h-64 w-full rounded-md border border-zinc-300 p-3 font-mono text-xs"
               value={promptOutput}
@@ -110,12 +138,37 @@ export default function TemplateToolPage() {
       </section>
 
       <section className="rounded-xl border border-zinc-200 p-6">
-        <h2 className="mb-2 text-lg font-semibold">Markdown scaffold</h2>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Markdown scaffold</h2>
+          <CopyButton text={markdownOutput} label="Copy scaffold" />
+        </div>
         <textarea
           className="h-80 w-full rounded-md border border-zinc-300 p-3 font-mono text-xs"
           value={markdownOutput}
           readOnly
         />
+      </section>
+
+      <section className="rounded-xl border border-zinc-200 p-6">
+        <h2 className="mb-2 text-lg font-semibold">Section-by-section prompt pack</h2>
+        <p className="mb-4 text-sm text-zinc-600">
+          Use these prompts to generate each section independently (rewrite + fact-check notes included).
+        </p>
+        <div className="grid gap-4">
+          {sectionPrompts.map((p) => (
+            <div key={p.section} className="rounded-lg border border-zinc-200 bg-white/60 p-4 backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="font-semibold text-zinc-900">{p.section}</div>
+                <CopyButton text={p.prompt} label="Copy section prompt" />
+              </div>
+              <textarea
+                className="mt-3 h-40 w-full rounded-md border border-zinc-300 p-3 font-mono text-xs"
+                value={p.prompt}
+                readOnly
+              />
+            </div>
+          ))}
+        </div>
       </section>
     </main>
   );

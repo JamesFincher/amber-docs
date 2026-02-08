@@ -12,6 +12,11 @@ export type DocTemplate = {
   requiredFields: TemplateField[];
 };
 
+export type SectionPrompt = {
+  section: string;
+  prompt: string;
+};
+
 export const docTemplates: DocTemplate[] = [
   {
     id: "executive-brief",
@@ -69,12 +74,19 @@ export const docTemplates: DocTemplate[] = [
   },
 ];
 
-export function buildPrompt(template: DocTemplate, inputValues: Record<string, string>, topic: string): string {
-  const fields = template.requiredFields
+function renderFields(template: DocTemplate, inputValues: Record<string, string>): string {
+  return template.requiredFields
     .map((field) => `${field.label}: ${inputValues[field.key] || "<fill this>"}`)
     .join("\n");
+}
 
-  const sectionList = template.sections.map((section, idx) => `${idx + 1}. ${section}`).join("\n");
+function renderSectionList(template: DocTemplate): string {
+  return template.sections.map((section, idx) => `${idx + 1}. ${section}`).join("\n");
+}
+
+export function buildPrompt(template: DocTemplate, inputValues: Record<string, string>, topic: string): string {
+  const fields = renderFields(template, inputValues);
+  const sectionList = renderSectionList(template);
 
   return `You are an expert documentation strategist.
 
@@ -88,10 +100,43 @@ ${sectionList}
 
 Quality bar:
 - Keep claims concrete and verifiable.
+- Do not invent facts. If something is unknown, say so.
+- For every number/date/name that matters, add a "(SOURCE NEEDED: ...)" note.
 - Include assumptions explicitly.
 - Flag open questions and unresolved risks.
 - Keep style concise and decision-oriented.
 `;
+}
+
+export function buildSectionPromptPack(
+  template: DocTemplate,
+  inputValues: Record<string, string>,
+  topic: string,
+): SectionPrompt[] {
+  const fields = renderFields(template, inputValues);
+  const outline = renderSectionList(template);
+  const name = template.name;
+
+  return template.sections.map((section) => ({
+    section,
+    prompt: `You are drafting a ${name}.
+
+Topic: ${topic || "<topic>"}
+
+Requirements:
+${fields}
+
+Full outline (do not change section names):
+${outline}
+
+Task:
+- Write ONLY the section titled "${section}" as Markdown under a "## ${section}" heading.
+- Keep it concise and decision-oriented.
+- Do not invent facts. If unknown, state what's missing.
+- Extract concrete claims and add "(SOURCE NEEDED: ...)" after each claim that needs verification.
+- End with an "Open questions" bullet list if anything blocks completion.
+`,
+  }));
 }
 
 export function buildMarkdownSkeleton(template: DocTemplate, inputValues: Record<string, string>, topic: string): string {

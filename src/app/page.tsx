@@ -13,6 +13,14 @@ const features = [
     title: "Template-driven writing",
     description: "Use reusable templates to generate uniform prompts and consistent document shapes.",
   },
+  {
+    title: "Search + anchors",
+    description: "Search across docs, deep-link sections with stable anchors, and copy raw markdown.",
+  },
+  {
+    title: "Quality signals",
+    description: "Surface owners, last reviewed dates, and citations hints for trust and freshness.",
+  },
 ];
 
 export default function Home() {
@@ -37,6 +45,12 @@ export default function Home() {
             className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
           >
             Open template tool
+          </Link>
+          <Link
+            href="/blocks"
+            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+          >
+            Browse blocks
           </Link>
         </div>
       </header>

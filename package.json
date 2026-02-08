@@ -6,7 +6,8 @@
     "dev": "concurrently -n web,convex -c cyan,magenta \"next dev\" \"convex dev\"",
     "dev:web": "next dev",
     "dev:convex": "convex dev",
-    "build": "next build",
+    "qa": "tsx scripts/content-qa.ts",
+    "build": "pnpm qa && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -33,6 +34,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.20.5",
     "typescript": "^5",
     "wrangler": "^4.50.0"
   }
